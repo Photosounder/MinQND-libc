@@ -39,7 +39,7 @@ It was quick, it's dirty, it does what I need correctly, as simply as possible a
 
 ### Binary size
 
-For a WebAssembly module that calls `sin()`, `cos()` and `exp()` and uses `sscanf()` and `sprintf()` to read and print decimal and hexadecimal integers, `double` values and match words, I get a 13.6 kB 32-bit WASM file:
+For a WebAssembly module that calls `sin()`, `cos()` and `exp()` and uses `sscanf()` and `sprintf()` to read and print decimal and hexadecimal integers, `double` values and match words, I get a 12.8 kB 32-bit WASM file:
 
 * 1.1 kB for the module's own code.
 * 4.4 kB for CIT Alloc.
