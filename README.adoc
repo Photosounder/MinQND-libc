@@ -1,0 +1,76 @@
+:toc:
+
+## Minimal quick & dirty libc for my WebAssembly modules
+
+### What's wrong with normal libc
+
+Typical libc implementations have specific priorities:
+
+* Total standard compliance.
+* Total mathematical accuracy.
+* High speed of execution that doesn't harm compliance and accuracy.
+
+In a way there's nothing wrong with these priorities because they're what we collectively need. But this comes at a cost. Their code is usually big and complex, even trivial functions like `memset()` have complex implementations to handle every possibility as fast as possible. As a result, not only is their code several times bigger than strictly needed, it's typically very hard to read and debug, it nests deeply and turns into a big bloated black box. Not only this, but because of the inconsiderate way they're written they might force you to include advanced functionality that you don't actually need. For instance simply calling https://github.com/WebAssembly/wasi-libc[WASI libc]'s `sscanf()` will include `fprintf()` which includes the extended WASI functionality for writing files from WebAssembly, which bothers me because such functionality is against my https://github.com/Photosounder/WAHE/[WAHE] philosophy (I have lots of philosophies).
+
+### The minimal, quick & dirty philosophy
+
+I for one don't want all that junk, I have different, almost opposite priorities:
+
+* Simplicity at the expense of exhaustiveness and sometimes a bit of speed.
+* Only include the functionality I need.
+* Only have decent mathematical accuracy by default (which results in much higher speeds).
+* Minimal libc footprint in my binaries.
+* Calling one libc function doesn't result in a dozen obscure functions being linked and called.
+* Code is very readable and debuggable.
+
+In 2024 my experience with WebAssembly/link:https://github.com/Photosounder/WAHE/[WAHE] is pushing me towards a desire to make everything clean. Instead of producing obscure executables that do and contain who knows what and make a mess in RAM I feel a need to produce clean, minimal binaries whose binary contents are well understood by me and whose memory is clean, well-maintaned (for instance free memory is blanked so that only current data would be seen), mappable and visualisable in real time and even directly readable at the byte level. I no longer want to do everything blindly like everybody else, vaguely assuming what's going on without really knowing, without an awareness of what's really in the binary and the memory, where it's all located, how it's laid out and what it looks like. When you see all of this you realise the absurdity of both your code and the libc implementation you rely on, and the next step is to do something about it.
+
+### It wasn't hard to create
+
+Creating your own libc sounds like a herculean undertaking, but not so with this philosophy. In just a few days I had all the functions I needed so I could compile and run an already existing module:
+
+* A lot of basic functions are defined as builtins, for instance `#define sqrt __builtin_sqrt`, so those were dead simple to add.
+* I adapted many of the most trivial functions like the functions defined in `ctype.h` and `string.h` from https://github.com/WebAssembly/wasi-libc[WASI libc] (which themselves come from other libraries, which makes it difficult to credit precisely) and cut out the bloat, such as removing the bulk of `memset()` that deals with optimally copying words as a fallback to the builtin implementation.
+* I made approximations for mathematical functions like `exp()`, `sin()` and `cos()` that are surprisingly simple, very fast compared to typical libc approximations that focus on maximal accuracy, yet with very decent accuracy to a few https://en.wikipedia.org/wiki/Unit_in_the_last_place[ULPs] which makes them a very good compromise for most cases.
+* What took me the longest, unsurprisingly, are my fully original implementations of `vsnprintf()` and `vsscanf()`, which in accordance with my new philosophy are simple, only contain the features I currently need (no `%a` nor `%o` support for instance, I've never needed those) but still work just like the original for my use cases.
+* I already have my own allocator called the https://github.com/Photosounder/CITAlloc/[Compact Info Table Allocator] which I use in parallel to this.
+
+It was quick, it's dirty, it does what I need correctly, as simply as possible and more accurately than truly needed. As I need more, I will add more, but because it will be mainly in new separate functions it won't actually bloat up my existing modules as the functions it doesn't need won't be linked.
+
+### Binary size
+
+For a WebAssembly module that calls `sin()`, `cos()` and `exp()` and uses `sscanf()` and `sprintf()` to read and print decimal and hexadecimal integers, `double` values and match words, I get a 13.6 kB 32-bit WASM file:
+
+* 1.1 kB for the module's own code.
+* 4.4 kB for CIT Alloc.
+* 5.5 kB for `sscanf()` and `sprintf()` together.
+* 0.5 kB for the mathematical functions.
+* 0.4 kB for basic functions like `memset()`, `memcpy()`, `memmove()`, `strlen()`, `strchr()`, `strncpy()`.
+* The rest is various data.
+
+The module's map looks clear and clean, there's no function included that isn't truly needed, and unlike the same module built with WASI libc it's not a 59 kB mess.
+
+### Look at the code
+
+Look at it, it's nice. You won't often see a `cos()` implementation this straightforward.
+
+## How to use it
+
+I use it along with CIT Alloc and my default WAHE-related headers in WebAssembly modules by writing this at the top of the module's C file:
+
+```c
+#define MINQND_LIBC_IMPLEMENTATION
+#include "minqnd_libc.h"
+
+#include "cita_wasm.h"
+
+#define WAHE_INCLUDE_IMPL
+#include <wahe_imports.h>
+#include <wahe_utils.h>
+
+#define CITA_EXCLUDE_STRING_H
+#define CITA_WASM_IMPLEMENTATION_PART2
+#include "cita_wasm.h"
+```
+
+Note how there are no standard headers like `stdlib.h`, the litany of standard header includes from the original version of this module is gone, there's only `minqnd_libc.h`. This is the minimal quick & dirty approach, we don't need all these separate headers, we don't need to conform to the standard for such details, this works.
