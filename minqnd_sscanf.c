@@ -76,16 +76,16 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 				char *vs = va_arg(arg, char *);
 
 				int is, scanset_start = f_pos + 1;
-				for (is = 0; s[s_pos] && !isspace(s[s_pos]) && field_width; is++, s_pos++, field_width--)
+				for (is = 0; s[s_pos] && (!isspace(s[s_pos]) || conv_spec == '[') && field_width; is++, s_pos++, field_width--)
 				{
-					int copy = 0, neg = 0;
+					int i, copy = 0, neg = 0;
 
 					if (conv_spec == 's')
 						copy = 1;
 					else
 					{
 						// Go through scanset and test char
-						for (int i = scanset_start; fmt[i] != ']'; i++)
+						for (i = scanset_start; fmt[i] != ']'; i++)
 						{
 							unsigned int c0, c1;
 
@@ -111,6 +111,7 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 								copy = 1;
 						}
 
+						f_pos = i;
 						copy ^= neg;
 					}
 
