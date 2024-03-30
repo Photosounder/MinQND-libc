@@ -93,7 +93,7 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 			{
 				field_width = fmt[f_pos] - '0';
 				f_pos++;
-				while (fmt[f_pos] >= '0' && fmt[f_pos] <= '9')
+				while (isdigit(fmt[f_pos]))
 				{
 					field_width = field_width*10 + fmt[f_pos] - '0';
 					f_pos++;
@@ -115,7 +115,7 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 				{
 					precision = fmt[f_pos] - '0';
 					f_pos++;
-					while (fmt[f_pos] >= '0' && fmt[f_pos] <= '9')
+					while (isdigit(fmt[f_pos]))
 					{
 						precision = precision*10 + fmt[f_pos] - '0';
 						f_pos++;

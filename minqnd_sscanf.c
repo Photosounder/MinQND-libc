@@ -9,59 +9,24 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 		{
 			f_pos++;
 
-			// Read flags
-			int flag_left_just=0, flag_plus=0, flag_space=0, flag_alt=0, flag_zero_pad=0;
-			while (fmt[f_pos]=='-' || fmt[f_pos]=='+' || fmt[f_pos]==' ' || fmt[f_pos]=='#' || fmt[f_pos]=='0')
+			// Read suppression flags
+			int flag_suppr = 0;
+			while (fmt[f_pos]=='*')
 			{
-				switch (fmt[f_pos])
-				{
-						case '-': flag_left_just = 1;
-					break;	case '+': flag_plus = 1;
-					break;	case ' ': flag_space = 1;
-					break;	case '#': flag_alt = 1;
-					break;	case '0': flag_zero_pad = 1;
-				}
+				flag_suppr = 1;
 				f_pos++;
 			}
 
 			// Read field width
 			int field_width = 0;
-			if (fmt[f_pos] == '*')
-			{
-				field_width = va_arg(arg, int);
-				f_pos++;
-			}
 			if (fmt[f_pos] >= '1' && fmt[f_pos] <= '9')
 			{
 				field_width = fmt[f_pos] - '0';
 				f_pos++;
-				while (fmt[f_pos] >= '0' && fmt[f_pos] <= '9')
+				while (isdigit(fmt[f_pos]))
 				{
 					field_width = field_width*10 + fmt[f_pos] - '0';
 					f_pos++;
-				}
-			}
-
-			// Read precision
-			int precision = -1;
-			if (fmt[f_pos] == '.')
-			{
-				precision = 0;
-				f_pos++;
-				if (fmt[f_pos] == '*')
-				{
-					precision = va_arg(arg, int);
-					f_pos++;
-				}
-				if (fmt[f_pos] >= '1' && fmt[f_pos] <= '9')
-				{
-					precision = fmt[f_pos] - '0';
-					f_pos++;
-					while (fmt[f_pos] >= '0' && fmt[f_pos] <= '9')
-					{
-						precision = precision*10 + fmt[f_pos] - '0';
-						f_pos++;
-					}
 				}
 			}
 
@@ -86,7 +51,8 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 			if (conv_spec == 'n')
 			{
 				int *n = va_arg(arg, int *);
-				*n = s_pos;
+				if (flag_suppr == 0)
+					*n = s_pos;
 			}
 
 			// Parse %
@@ -98,18 +64,27 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 			if (conv_spec == 'c')
 			{
 				char *vc = va_arg(arg, char *);
-				*vc = s[s_pos++];
+				if (flag_suppr == 0)
+					*vc = s[s_pos];
+				s_pos++;
 				match_count++;
 			}
 
 			// Parse string
 			if (conv_spec == 's')
 			{
+				// Prepare field width
+				if (field_width == 0)
+					field_width = INT_MAX;
+
+				// Copy characters
 				char *vs = va_arg(arg, char *);
 				int is;
-				for (is = 0; s[s_pos] && !isspace(s[s_pos]); is++, s_pos++)
-					vs[is] = s[s_pos];
-				vs[is] = '\0';
+				for (is = 0; s[s_pos] && !isspace(s[s_pos]) && field_width; is++, s_pos++, field_width--)
+					if (flag_suppr == 0)
+						vs[is] = s[s_pos];
+				if (flag_suppr == 0)
+					vs[is] = '\0';
 				match_count++;
 			}
 
@@ -249,7 +224,7 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 			}
 
 			// Store integer
-			if (conv_is_int)
+			if (conv_is_int && flag_suppr == 0)
 			{
 				switch (len_mod)
 				{
@@ -267,10 +242,11 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 			}
 
 			// Store float
-			if (conv_is_float)
+			if (conv_is_float && flag_suppr == 0)
 			{
 				switch (len_mod)
 				{
+						case 'L':	// long double falls back to double
 						case 'l':  { double *pf = va_arg(arg, double *); *pf = vf; }
 					break;	default:   { float  *pf = va_arg(arg, float *);  *pf = vf; }
 				}

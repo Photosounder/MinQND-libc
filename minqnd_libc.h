@@ -5,6 +5,11 @@
 #include <stdint.h>
 
 
+//**** limits.h ****
+
+#define INT_MAX  0x7fffffff
+
+
 //**** math.h ****
 
 #define NAN (0./0.)
