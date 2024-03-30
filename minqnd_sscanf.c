@@ -18,7 +18,7 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 			}
 
 			// Read field width
-			int field_width = 0;
+			int field_width = INT_MAX;
 			if (fmt[f_pos] >= '1' && fmt[f_pos] <= '9')
 			{
 				field_width = fmt[f_pos] - '0';
@@ -71,24 +71,61 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 			}
 
 			// Parse string
-			if (conv_spec == 's')
+			if (conv_spec == 's' || conv_spec == '[')
 			{
-				// Prepare field width
-				if (field_width == 0)
-					field_width = INT_MAX;
-
-				// Copy characters
 				char *vs = va_arg(arg, char *);
-				int is;
+
+				int is, scanset_start = f_pos + 1;
 				for (is = 0; s[s_pos] && !isspace(s[s_pos]) && field_width; is++, s_pos++, field_width--)
-					if (flag_suppr == 0)
+				{
+					int copy = 0, neg = 0;
+
+					if (conv_spec == 's')
+						copy = 1;
+					else
+					{
+						// Go through scanset and test char
+						for (int i = scanset_start; fmt[i] != ']'; i++)
+						{
+							unsigned int c0, c1;
+
+							// Negation by [^...]
+							if (fmt[i] == '^' && i == scanset_start)
+							{
+								neg = 1;
+								i++;
+							}
+
+							// Range
+							c0 = fmt[i];
+							if (fmt[i+1] == '-')
+							{
+								i += 2;
+								c1 = fmt[i];
+							}
+							else
+								c1 = c0;
+
+							// Test
+							if (s[s_pos] >= c0 && s[s_pos] <= c1)
+								copy = 1;
+						}
+
+						copy ^= neg;
+					}
+
+					if (copy && flag_suppr == 0)
 						vs[is] = s[s_pos];
+
+					if (copy == 0)
+						break;
+				}
+
 				if (flag_suppr == 0)
 					vs[is] = '\0';
+
 				match_count++;
 			}
-
-			// TODO Parse %[] scanset
 
 			// Handle pointer
 			if (conv_spec == 'p')
