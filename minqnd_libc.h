@@ -11,7 +11,19 @@
 #define INT_MAX 0x7fffffff
 #define FLT_MAX 3.4028235e38f
 #define DBL_MAX 1.7976931348623147e+308
+#define PATH_MAX 4096
 
+
+//**** inttypes.h ****
+
+#if UINTPTR_MAX == UINT64_MAX
+#define __PRI64  "l"
+#define __PRIPTR "l"
+#else
+#define __PRI64  "ll"
+#define __PRIPTR ""
+#endif
+#define PRIdMAX __PRI64 "d"
 
 //**** math.h ****
 
@@ -31,6 +43,7 @@ static inline double int_as_double(uint64_t i) { union {double f; uint64_t i;} u
 
 extern double fmod(double x, double y);
 extern double exp(double x);
+extern float expf(float x);
 extern double exp2(double x);
 extern double log(double x);
 extern double log2(double x);
@@ -42,8 +55,14 @@ extern double cos(double x);
 extern double sin_tr(double x);
 extern double cos_tr(double x);
 extern double tan(double x);
+extern double atan(double x);
 extern double atan2(double y, double x);
+extern float atan2f(float y, float x);
 extern double asin(double x);
+extern double acos(double x);
+extern double sinh(double x);
+extern double cosh(double x);
+extern double tanh(double x);
 extern double hypot(double x, double y);
 extern double tgamma(double x);
 extern double erf(double x);
@@ -72,18 +91,20 @@ static double fma(double x, double y, double z) { return __builtin_fma(x, y, z);
 extern int isspace(int c);
 extern int isdigit(int c);
 extern int isxdigit(int c);
+extern int isalpha(int c);
+extern int isalnum(int c);
+extern int isupper(int c);
+extern int tolower(int c);
 
 
 //**** stdio.h ****
 
-typedef int FILE;	// we don't actually use FILE for now
-extern FILE *const stdin;
-extern FILE *const stdout;
-extern FILE *const stderr;
-
 #include <stddef.h>	// for NULL
 #define size_t unsigned long	// correct on wasm32 and wasm64
 #define EOF (-1)
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
 
 #define va_list __builtin_va_list
 #define va_start(v,l)   __builtin_va_start(v,l)
@@ -91,14 +112,36 @@ extern FILE *const stderr;
 #define va_arg(v,l)     __builtin_va_arg(v,l)
 #define va_copy(d,s)    __builtin_va_copy(d,s)
 
+typedef int FILE;	// we don't actually use FILE for now
+extern FILE *const stdin;
+extern FILE *const stdout;
+extern FILE *const stderr;
+static char *fgets(char *s, int n, FILE *stream) { return NULL; }
+static int fprintf(FILE *stream, const char *format, ...) { return -1; }
+static FILE *fopen(const char *filename, const char *mode) { return NULL; }
+static int fclose(FILE *stream) { return EOF; }
+static size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream) { return EOF; }
+static size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) { return EOF; }
+static int fseek(FILE *stream, long int offset, int whence) { return EOF; }
+static long int ftell(FILE *stream) { return 0; }
+static void rewind(FILE *stream) { }
+
 extern void *memset(void *s, int c, size_t n);
 extern void *memcpy(void *s1, const void *s2, size_t n);
 extern void *memmove(void *s1, const void *s2, size_t n);
 extern size_t strlen(const char *s);
+extern void *memchr(const void *s, int c, size_t n);
+extern void *memrchr(const void *s, int c, size_t n);
 extern char *strchr(const char *s, int c);
-extern int strncmp(const char *s1, const char *s2, size_t n);
+extern char *strrchr(const char *s, int c);
+extern char *strpbrk(const char *s1, const char *s2);
 extern char *strstr(const char *s1, const char *s2);
+extern int strcmp(const char *s1, const char *s2);
+extern int strncmp(const char *s1, const char *s2, size_t n);
+extern int memcmp(const void *s1, const void *s2, size_t n);
+extern char *strcpy(char *s1, const char *s2);
 extern char *strncpy(char *s1, const char *s2, size_t n);
+
 extern int vsnprintf(char *s, size_t n, const char *format, va_list arg);
 extern int vsprintf(char *s, const char *format, va_list arg);
 extern int snprintf(char *s, size_t n, const char *format, ...);
@@ -112,6 +155,7 @@ extern int sscanf(const char *s, const char *format, ...);
 extern int abs(int j);
 extern long long int llabs(long long int j);
 extern int atoi(const char *nptr);
+extern double atof(const char *nptr);
 extern double strtod(const char *nptr, char **endptr);
 extern void srand(unsigned int seed);
 extern int rand(void);
@@ -145,12 +189,10 @@ typedef long ssize_t;
 
 //**** math.h ****
 
-double fmod(double x, double y)
-{
-	return x;	// TODO
-}
+double fmod(double x, double y) { return x - trunc(x / y) * y; }
 
 double exp(double x) { return exp2(x*1.4426950408889634); }
+float expf(float x) { return exp(x); }
 double exp2(double x)
 {
 	if (x < -1022.)	return 0.;
@@ -194,6 +236,8 @@ double tan(double x)
 	return x;	// TODO
 }
 
+double atan(double x) { return atan2(x, 1.); }
+float atan2f(float y, float x) { return atan2(y, x); }
 double atan2(double y, double x)	// error < 1.05e-15 radians
 {
 	double xa = fabs(x), ya = fabs(y);
@@ -211,11 +255,11 @@ double asin(double x)
 	return x;	// TODO
 }
 
-double hypot(double x, double y)
-{
-	return sqrt(x*x + y*y);
-}
-
+double acos(double x) { return 0.5*M_PI - asin(x); }
+double sinh(double x) { return (exp(x) - exp(-x)) * 0.5; }
+double cosh(double x) { return (exp(x) + exp(-x)) * 0.5; }
+double tanh(double x) { double e = exp(2.*x); return (e-1.) / (e+1.); }
+double hypot(double x, double y) { return sqrt(x*x + y*y); }
 double tgamma(double x) { return NAN; }	// TODO
 
 double erf(double x)
@@ -244,6 +288,10 @@ double erf(double x)
 int isspace(int c) { return c == ' ' || (unsigned)c-'\t' < 5; }
 int isdigit(int c) { return (unsigned)c-'0' < 10; }
 int isxdigit(int c) { return isdigit(c) || ((unsigned)c|32)-'a' < 6; }
+int isalpha(int c) { return ((unsigned)c|32)-'a' < 26; }
+int isalnum(int c) { return isalpha(c) || isdigit(c); }
+int isupper(int c) { return (unsigned)c-'A' < 26; }
+int tolower(int c) { if (isupper(c)) return c | 32; return c; }
 
 
 //**** stdio.h ****
@@ -257,6 +305,7 @@ FILE *const stderr = NULL;
 int abs(int j) { return j > 0 ? j : -j; }
 long long int llabs(long long int j) { return j > 0 ? j : -j; }
 int atoi(const char *nptr) { int v=0; sscanf(nptr, "%d", &v); return v; }
+double atof(const char *nptr) { double v=0; sscanf(nptr, "%lg", &v); return v; }
 
 double strtod(const char *nptr, char **endptr)
 {
@@ -366,6 +415,24 @@ size_t strlen(const char *s)
 	return e-s;
 }
 
+void *memchr(const void *s, int c, size_t n)
+{
+	const unsigned char *sc = s;
+	c = (unsigned char)c;
+	for (; n && *sc != c; sc++, n--);
+	return n ? (void *)sc : 0;
+}
+
+void *memrchr(const void *s, int c, size_t n)
+{
+	const unsigned char *sc = s;
+	c = (unsigned char) c;
+	while (n--)
+		if (sc[n] == c)
+			return (void *)(sc+n);
+	return NULL;
+}
+
 char *strchr(const char *s, int c)
 {
 	c = (unsigned char)c;
@@ -374,12 +441,15 @@ char *strchr(const char *s, int c)
 	return *(unsigned char *)s == (unsigned char)c ? (char *)s : 0;
 }
 
-int strncmp(const char *s1, const char *s2, size_t n)
-{
-	const unsigned char *l=(void *)s1, *r=(void *)s2;
-	if (!n--) return 0;
-	for (; *l && *r && n && *l == *r ; l++, r++, n--);
-	return *l - *r;
+char *strrchr(const char *s, int c) { return memrchr(s, c, strlen(s) + 1); }
+
+char *strpbrk(const char *s1, const char *s2) {
+	size_t i1, i2;
+	for (i1 = 0; s1[i1]; i1++)
+		for (i2 = 0; s2[i2]; i2++)
+			if (s1[i1] == s2[i2])
+				return (char *) &s1[i1];
+	return (char *) &s1[i1];
 }
 
 char *strstr(const char *s1, const char *s2) 
@@ -405,6 +475,28 @@ char *strstr(const char *s1, const char *s2)
 	return (char *) s1;
 }
 
+int strcmp(const char *s1, const char *s2)
+{
+	for (; *s1==*s2 && *s1; s1++, s2++);
+	return *(unsigned char *)s1 - *(unsigned char *)s2;
+}
+
+int strncmp(const char *s1, const char *s2, size_t n)
+{
+	const unsigned char *l=(void *)s1, *r=(void *)s2;
+	if (!n--) return 0;
+	for (; *l && *r && n && *l == *r ; l++, r++, n--);
+	return *l - *r;
+}
+
+int memcmp(const void *s1, const void *s2, size_t n)
+{
+	const unsigned char *l=s1, *r=s2;
+	for (; n && *l == *r; n--, l++, r++);
+	return n ? *l-*r : 0;
+}
+
+char *strcpy(char *s1, const char *s2) { return strncpy(s1, s2, SIZE_MAX); }
 char *strncpy(char *s1, const char *s2, size_t n)
 {
 	for (; n && (*s1=*s2); n--, s2++, s1++) {}
