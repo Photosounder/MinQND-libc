@@ -489,12 +489,7 @@ size_t strftime(char * restrict s, size_t maxsize, const char *format, const str
 
 //**** crt1-reactor.c ****
 
-#if defined(_REENTRANT)
-#include <stdatomic.h>
-extern void __wasi_init_tp(void);
-#endif
 extern void __wasm_call_ctors(void);
-
 __attribute__((export_name("_initialize"))) void _initialize(void)
 {
 	static volatile int initialized = 0;
