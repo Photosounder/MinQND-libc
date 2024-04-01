@@ -17,13 +17,14 @@
 //**** inttypes.h ****
 
 #if UINTPTR_MAX == UINT64_MAX
-#define __PRI64  "l"
-#define __PRIPTR "l"
+  #define __PRI64  "l"
+  #define __PRIPTR "l"
 #else
-#define __PRI64  "ll"
-#define __PRIPTR ""
+  #define __PRI64  "ll"
+  #define __PRIPTR ""
 #endif
 #define PRIdMAX __PRI64 "d"
+
 
 //**** math.h ****
 
@@ -209,12 +210,12 @@ double exp2(double x)
 }
 
 double log(double x) { return log2(x) * 0.6931471805599453; }
-double log2(double x)
-{	// error < 5.6e-16 in x = [1 , 2]
+double log2(double x)	// error < 5.6e-16 in x = [1 , 2]
+{
 	if (x == 0.) return -INFINITY;
 	if (isfinite(x) == 0 || x < 0.)	return NAN;
 	int dexp = ((double_as_int(x) >> 52) & 0x7FF) - 1023;
-	x = int_as_double(0x3FF0000000000000 | (double_as_int(x) & 0x000FFFFFFFFFFFFF)) - 1.;
+	x = int_as_double(0x3FF0000000000000 | (double_as_int(x) & 0x000FFFFFFFFFFFFF)) - 1.;	// x -> [0 , 1[
 	double mlog = (((((((((((((((((((-3.875403760417e-05*x + 0.00044698118761163)*x - 0.00244848531481462)*x + 0.00852083615839964)*x - 0.0213191869638036)*x + 0.04131053521866153)*x - 0.065555177283666503)*x + 0.089482861465356655)*x - 0.11005436646074359)*x + 0.12723476135812695)*x - 0.14305519031975983)*x + 0.16000129093273448)*x - 0.18027986442557736)*x + 0.20609098709475556)*x - 0.24044827892686577)*x + 0.28853893972854774)*x - 0.36067375670991322)*x + 0.48089834685222948)*x - 0.72134752044262604)*x + 1.442695040888951)*x;
 	return (double) dexp + mlog;
 }
@@ -225,12 +226,9 @@ double cbrt(double x) { return pow(x, 1./3.); }
 double sin(double x) { return sin_tr(x * (1./(2.*M_PI))); }
 double cos(double x) { return cos_tr(x * (1./(2.*M_PI))); }
 double sin_tr(double x) { return cos_tr(x - 0.25); }
-double cos_tr(double x)
+double cos_tr(double x)	// error < 3.4e-16
 {
-	// x --> [-0.25 , 0.25]
-	x = fabs(x - floor(x) - 0.5) - 0.25;
-
-	// Error < 3.4e-16
+	x = fabs(x - floor(x) - 0.5) - 0.25;	// x --> [-0.25 , 0.25]
 	double x2 = x * x;
 	return ((((((((0.1007146753*x2 - 0.7176853699)*x2 + 3.81992279752)*x2 - 15.0946413686846)*x2 + 42.05869391526577)*x2 - 76.705859752634335)*x2 + 81.60524927607172)*x2 - 41.341702240399748)*x2 + 6.2831853071795865)*x;
 }
@@ -275,24 +273,14 @@ double tanh(double x) { double e = exp(2.*x); return (e-1.) / (e+1.); }
 double hypot(double x, double y) { return sqrt(x*x + y*y); }
 double tgamma(double x) { return NAN; }	// TODO
 
-double erf(double x)
+double erf(double x)	// error < 1.5e-15
 {
 	double y, xa = fabs(x);
-
 	if (xa > 6.)
-		y = 1.;
-	else
-	{
-		// erf(x) ~= 1 - polynomial^-8 for x >= 0, max error 1.5e-15
-		y = (((((((((((((((((((((3.847446425233e-15*xa + -1.67842955663171e-13)*xa + 3.477665942359862e-12)*xa + -4.5278406665374846e-11)*xa + 4.1431968115923484e-10)*xa + -2.8191376405557979e-09)*xa + 1.4694293215089563e-08)*xa + -5.9193430766414834e-08)*xa + 1.817739597449057e-07)*xa + -3.9725626384852649e-07)*xa + 4.713180470756501e-07)*xa + 4.889167169868577e-07)*xa + -3.217811989057157e-06)*xa + 6.5040168714717147e-06)*xa + 1.641819587052259e-05)*xa + -2.883536587780375e-05)*xa + 0.00034381014214142996)*xa + 0.0012709605848389835)*xa + 0.0033952701135075287)*xa + 0.024538445328735638)*xa + 0.08952465548981831)*xa + 0.14104739588692786)*xa + 1.;
-
-		// y = 1 - y^-8
-		y = y*y;
-		y = y*y;
-		y = y*y;
-		y = 1. - 1./y;
-	}
-	return x < 0. ? -y : y;
+		return copysign(1., x);
+	y = (((((((((((((((((((((3.847446425233e-15*xa + -1.67842955663171e-13)*xa + 3.477665942359862e-12)*xa + -4.5278406665374846e-11)*xa + 4.1431968115923484e-10)*xa + -2.8191376405557979e-09)*xa + 1.4694293215089563e-08)*xa + -5.9193430766414834e-08)*xa + 1.817739597449057e-07)*xa + -3.9725626384852649e-07)*xa + 4.713180470756501e-07)*xa + 4.889167169868577e-07)*xa + -3.217811989057157e-06)*xa + 6.5040168714717147e-06)*xa + 1.641819587052259e-05)*xa + -2.883536587780375e-05)*xa + 0.00034381014214142996)*xa + 0.0012709605848389835)*xa + 0.0033952701135075287)*xa + 0.024538445328735638)*xa + 0.08952465548981831)*xa + 0.14104739588692786)*xa + 1.;
+	y = y*y; y = y*y; y = y*y;	// y = 1 - y^-8
+	return copysign(1. - 1./y, x);
 }
 
 
@@ -345,10 +333,8 @@ void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, co
 {	// Ray Gardner's 1990 public domain shell sort
 	size_t wnel, gap, wgap, i, j, k;
 	char *a, *b, tmp;
-
 	wnel = size * nmemb;
-	for (gap = 0; ++gap < nmemb;)
-		gap *= 3;
+	for (gap = 0; ++gap < nmemb;) gap *= 3;
 	while ((gap /= 3) != 0)
 	{
 		wgap = size * gap;
@@ -357,17 +343,10 @@ void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, co
 			{
 				a = j + (char *)base;
 				b = a + wgap;
-				if ((*compar)(a, b) <= 0)
-					break;
+				if ((*compar)(a, b) <= 0) break;
 				k = size;
-				do {
-					tmp = *a;
-					*a++ = *b;
-					*b++ = tmp;
-				}
-				while (--k);
-				if (j < wgap)
-					break;
+				do { tmp = *a; *a++ = *b; *b++ = tmp; } while (--k);
+				if (j < wgap) break;
 			}
 	}
 }
@@ -377,47 +356,35 @@ void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, co
 void *memset(void *dest, int c, size_t n)
 {
 #if defined(__wasm_bulk_memory__)
-	if (n > BULK_MEMORY_THRESHOLD)
-		return __builtin_memset(dest, c, n);
+	if (n > BULK_MEMORY_THRESHOLD) return __builtin_memset(dest, c, n);
 #endif
 	char *s = dest;
-	for (; n; n--, s++)
-		*s = c;
+	for (; n; n--, s++) *s = c;
 	return dest;
 }
 
 void *memcpy(void *dest, const void *src, size_t n)
 {
 #if defined(__wasm_bulk_memory__)
-	if (n > BULK_MEMORY_THRESHOLD)
-		return __builtin_memcpy(dest, src, n);
+	if (n > BULK_MEMORY_THRESHOLD) return __builtin_memcpy(dest, src, n);
 #endif
 	char *d = dest;
 	const char *s = src;
-	for (; n; n--)
-		*d++ = *s++;
+	for (; n; n--) *d++ = *s++;
 	return dest;
 }
 
 void *memmove(void *dest, const void *src, size_t n)
 {
 #if defined(__wasm_bulk_memory__)
-	if (n > BULK_MEMORY_THRESHOLD)
-		return __builtin_memmove(dest, src, n);
+	if (n > BULK_MEMORY_THRESHOLD) return __builtin_memmove(dest, src, n);
 #endif
 	char *d = dest;
 	const char *s = src;
-
 	if (d == s) return d;
-	if ((uintptr_t)s-(uintptr_t)d-n <= -2*n)
-		return memcpy(d, s, n);
-
-	if (d < s)
-		for (; n; n--)
-			*d++ = *s++;
-	else
-		while (n) n--, d[n] = s[n];
-
+	if ((uintptr_t)s-(uintptr_t)d-n <= -2*n) return memcpy(d, s, n);
+	if (d < s) for (; n; n--) *d++ = *s++;
+	else while (n) n--, d[n] = s[n];
 	return dest;
 }
 
@@ -458,31 +425,17 @@ char *strrchr(const char *s, int c) { return memrchr(s, c, strlen(s) + 1); }
 
 char *strpbrk(const char *s1, const char *s2) {
 	size_t i1, i2;
-	for (i1 = 0; s1[i1]; i1++)
-		for (i2 = 0; s2[i2]; i2++)
-			if (s1[i1] == s2[i2])
-				return (char *) &s1[i1];
+	for (i1 = 0; s1[i1]; i1++) for (i2 = 0; s2[i2]; i2++) if (s1[i1] == s2[i2]) return (char *) &s1[i1];
 	return (char *) &s1[i1];
 }
 
 char *strstr(const char *s1, const char *s2) 
 {
 	char c, sc;
-	size_t len;
-
 	if ((c = *s2++) != 0)
 	{
-		len = strlen(s2);
-		do
-		{
-			do
-			{
-				if ((sc = *s1++) == 0)
-					return NULL;
-			}
-			while (sc != c);
-		}
-		while (strncmp(s1, s2, len) != 0);
+		size_t len = strlen(s2);
+		do { do { if ((sc = *s1++) == 0) return NULL; } while (sc != c); } while (strncmp(s1, s2, len) != 0);
 		s1--;
 	}
 	return (char *) s1;
@@ -544,18 +497,9 @@ extern void __wasm_call_ctors(void);
 
 __attribute__((export_name("_initialize"))) void _initialize(void)
 {
-#if defined(_REENTRANT)
-	static volatile atomic_int initialized = 0;
-	int expected = 0;
-	if (!atomic_compare_exchange_strong(&initialized, &expected, 1))
-		__builtin_trap();
-	__wasi_init_tp();
-#else
 	static volatile int initialized = 0;
-	if (initialized != 0)
-		__builtin_trap();
+	if (initialized) __builtin_trap();
 	initialized = 1;
-#endif
 	__wasm_call_ctors();
 }
 
