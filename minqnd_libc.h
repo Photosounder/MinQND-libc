@@ -235,11 +235,7 @@ double cos_tr(double x)
 	return ((((((((0.1007146753*x2 - 0.7176853699)*x2 + 3.81992279752)*x2 - 15.0946413686846)*x2 + 42.05869391526577)*x2 - 76.705859752634335)*x2 + 81.60524927607172)*x2 - 41.341702240399748)*x2 + 6.2831853071795865)*x;
 }
 
-double tan(double x)
-{
-	return x;	// TODO
-}
-
+double tan(double x) { return sin(x) / cos(x); }
 double atan(double x) { return atan2(x, 1.); }
 float atan2f(float y, float x) { return atan2(y, x); }
 double atan2(double y, double x)	// error < 4.5e-16 radians
@@ -253,9 +249,23 @@ double atan2(double y, double x)	// error < 4.5e-16 radians
 	return z;
 }
 
-double asin(double x)
+double asin(double x)	// error < 7e-16
 {
-	return x;	// TODO
+	double y, xa = fabs(x);
+	double xm = 1. - sqrt(1. - xa);
+	if (xm > 0.6)
+		y = (((((((((((-0.00184090735900975*xm + 0.0204313986896723)*xm - 0.1052467657067292)*xm + 0.335492459818416)*xm - 0.7435462926619241)*xm + 1.2237228343719441)*xm - 1.5646256928232335)*xm + 1.6235101917880144)*xm - 1.4315658943509152)*xm + 1.1918839257926788)*xm - 0.97470740300978645)*xm + 1.9971348885324504)*xm + 0.00015358371331862;
+	else
+	{
+		y = ((((0.2003*xm + -0.6249)*xm + 0.94057)*xm + -0.93961)*xm + 1.9963)*xm;
+		for (int i=0; i < 2; i++)	// Newton-Raphson steps
+		{
+			double s = sin(y);
+			double c = sqrt(1. - s*s);
+			y -= (s - xa) / c;
+		}
+	}
+	return copysign(y, x);
 }
 
 double acos(double x) { return 0.5*M_PI - asin(x); }
