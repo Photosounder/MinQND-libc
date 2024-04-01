@@ -267,15 +267,15 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 				switch (len_mod)
 				{
 						case 'h':  if (len_mod_doubled)
-							   { signed char   *pi = va_arg(arg, signed char *);	*pi = vi; } else
-							   { short int	   *pi = va_arg(arg, short int *);	*pi = vi; }
+							   { signed char   *pv = va_arg(arg, signed char *);	*pv = vi; } else
+							   { short int	   *pv = va_arg(arg, short int *);	*pv = vi; }
 					break;	case 'l':  if (len_mod_doubled)
-							   { long long int *pi = va_arg(arg, long long int *);	*pi = vi; } else
-							   { long int	   *pi = va_arg(arg, long int *);	*pi = vi; }
-					break;	case 'j':  { intmax_t	   *pi = va_arg(arg, intmax_t *);	*pi = vi; }
-					break;	case 'z':  { size_t	   *pi = va_arg(arg, size_t *);		*pi = vi; }
-					break;	case 't':  { ptrdiff_t	   *pi = va_arg(arg, ptrdiff_t *);	*pi = vi; }
-					break;	default:   { int	   *pi = va_arg(arg, int *);		*pi = vi; }
+							   { long long int *pv = va_arg(arg, long long int *);	*pv = vi; } else
+							   { long int	   *pv = va_arg(arg, long int *);	*pv = vi; }
+					break;	case 'j':  { intmax_t	   *pv = va_arg(arg, intmax_t *);	*pv = vi; }
+					break;	case 'z':  { size_t	   *pv = va_arg(arg, size_t *);		*pv = vi; }
+					break;	case 't':  { ptrdiff_t	   *pv = va_arg(arg, ptrdiff_t *);	*pv = vi; }
+					break;	default:   { int	   *pv = va_arg(arg, int *);		*pv = vi; }
 				}
 			}
 

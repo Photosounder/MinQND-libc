@@ -1,8 +1,3 @@
-int double_get_exponent(const double f)
-{
-	return ((double_as_u64(f) >> 52) & 0x07FF) - 1023;
-}
-
 double make_power_of_10(int p)
 {
 	double v = 1.;
@@ -36,7 +31,8 @@ int get_power_of_10_exponent(double v)
 	v = fabs(v);
 
 	// Guess power of 10 exponent from power of 2 exponent
-	int exponent = 1 + (double_get_exponent(v)+1) * 4004/13301;
+	int dexp = ((double_as_int(v) >> 52) & 0x07FF) - 1023;
+	int exponent = 1 + (dexp+1) * 4004/13301;
 
 	// Adjust exponent
 	double vd;
