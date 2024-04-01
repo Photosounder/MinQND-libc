@@ -31,7 +31,7 @@ int get_power_of_10_exponent(double v)
 	v = fabs(v);
 
 	// Guess power of 10 exponent from power of 2 exponent
-	int dexp = ((double_as_int(v) >> 52) & 0x07FF) - 1023;
+	int dexp = ((double_as_int(v) >> 52) & 0x7FF) - 1023;
 	int exponent = 1 + (dexp+1) * 4004/13301;
 
 	// Adjust exponent
