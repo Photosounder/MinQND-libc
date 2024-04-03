@@ -1,5 +1,4 @@
 :toc:
-:stem:
 
 ## Minimal quick & dirty libc for my WebAssembly modules
 
@@ -63,8 +62,8 @@ Truly original and unique function implementations worth looking at:
 * `log2()` which works by taking the IEEE-754 of the input which directly gives part of the result and applying a polynomial to the mantissa.
 * `cos_tr()` (the basis for `sin()` and `cos()`) which very directly limits the range of the input and applies a simple polynomial.
 * `atan2()` (which unusually serves as the basis for `atan()` instead of the other way around) which combines `y` and `x` in an original way and applies a polynomial to them.
-* `asin()` which "maps" the input (the polynomials approximate stem:[arcsin(2x-x^2])) then does the upper end using a simple polynomial and ironically ends up being more accurate near 1.0 than the default `asin()` (the latter ends like a staircase whereas mine is smooth) and the lower end using a rather short polynomial that is refined using two simple Newton-Raphson steps, meaning the accuracy of my `asin()` is somewhat impacted by the inaccuracy of my `sin()`.
-* `erf()` which uses an actually fairly common stem:[1 - polynomial^-8] approach.
+* `asin()` which "maps" the input (the polynomials approximate asin(2x-x^2^)) then does the upper end using a simple polynomial and ironically ends up being more accurate near 1.0 than the default `asin()` (the latter ends like a staircase whereas mine is smooth) and the lower end using a rather short polynomial that is refined using two simple Newton-Raphson steps, meaning the accuracy of my `asin()` is somewhat impacted by the inaccuracy of my `sin()`.
+* `erf()` which uses an actually fairly common 1 - polynomial^-8^ approach.
 * `qsort()`, which is not my own work at all, but I looked hard for the best algorithm to suit this library and this one is nice for being small without being too inefficient.
 
 ## How to use it
