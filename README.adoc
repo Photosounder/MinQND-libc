@@ -59,7 +59,7 @@ Truly original and unique function implementations worth looking at:
 * `vsnprintf()` (the basis for `sprintf()`) which relies on a very nice `get_power_of_10_exponent()` to calculate digit counts. Supports `%c`, `%s`, `%d` `%i` `%u` `%x` `%p`, `%g` `%f` `%e` with results that agree with an exact implementation up to about 17 digits, after that I get something different (I have no idea how default implementations are so accurate).
 * `vsscanf()` (the basis for `sscanf()`). Supports `%n`, `%c`, `%s` `%[]` `%[^]`, `%d` `%i` `%u` `%x` `%p`, `%g` `%f` `%e`.
 * `exp2()` which works by directly calculating the IEEE-754 exponent of the result and calculating the rest by polynomial.
-* `log2()` which works by taking the IEEE-754 of the input which directly gives part of the result and applying a polynomial to the mantissa.
+* `log2()` which works by taking the IEEE-754 exponent of the input which directly gives part of the result and applying a polynomial to the mantissa.
 * `cos_tr()` (the basis for `sin()` and `cos()`) which very directly limits the range of the input and applies a simple polynomial.
 * `atan2()` (which unusually serves as the basis for `atan()` instead of the other way around) which combines `y` and `x` in an original way and applies a polynomial to them.
 * `asin()` which "maps" the input (the polynomials approximate asin(2x-x^2^)) then does the upper end using a simple polynomial and ironically ends up being more accurate near 1.0 than the default `asin()` (the latter ends like a staircase whereas mine is smooth) and the lower end using a rather short polynomial that is refined using two simple Newton-Raphson steps, meaning the accuracy of my `asin()` is somewhat impacted by the inaccuracy of my `sin()`.
