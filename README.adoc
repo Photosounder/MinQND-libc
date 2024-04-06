@@ -65,14 +65,14 @@ Truly original and unique function implementations worth looking at:
 ++++
 <p align="center">
   <img src="./img/atan2 error.png">
-  <br>The difference between my atan2(y, x) and the standard implementation. Yellow is +4.5e-16, blue is -4.5e-16. The image appears dark because each pixel is a blend of higher and lower values (many zeroes).
+  <br><small>The difference between my atan2(y, x) and the standard implementation. Yellow is +4.5e-16, blue is -4.5e-16. The image appears dark because each pixel is a blend of higher and lower values (many zeroes).</small>
 </p>
 ++++
 * `asin()` which "maps" the input (the polynomials approximate asin(2x-x^2^)) then does the upper end using a simple polynomial and the lower end using a rather short polynomial that is refined using two simple Newton-Raphson steps, meaning the accuracy of my `asin()` is somewhat impacted by the inaccuracy of my `sin()`.
 ++++
 <p align="center">
   <img src="./img/asin error.png">
-  <br>The difference between my asin(x) and the standard implementation. Horizontal is x = [0 , 1], vertical is y = [0 , 7e-16]. A pixel is set to yellow or blue (positive or negative difference) when the difference for that x is greater than y. Grey means an even blend of positive and negative differences around this x.
+  <br><small>The difference between my asin(x) and the standard implementation. Horizontal is x = [0 , 1], vertical is y = [0 , 7e-16]. A pixel is set to yellow or blue (positive or negative difference) when the difference for that x is greater than y. Grey means an even blend of positive and negative differences around this x.</small>
 </p>
 ++++
 * `erf()` which uses an actually fairly common 1 - polynomial^-8^ approach.
