@@ -139,6 +139,13 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 			if (conv_spec == '%')
 				if (s_pos++<s_len) s[s_pos-1] = '%';
 
+			// Print char
+			if (conv_spec == 'c')
+			{
+				char c = va_arg(arg, int);
+				if (s_pos++<s_len) s[s_pos-1] = c;
+			}
+
 			// Print string
 			if (conv_spec == 's')
 			{
@@ -420,7 +427,7 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 
 	if (s_pos < s_len)
 		s[s_pos] = '\0';
-	else
+	else if (s)
 		s[s_len-1] = '\0';
 	return s_pos;
 }
