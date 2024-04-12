@@ -462,7 +462,7 @@ char *strcpy(char *s1, const char *s2) { return strncpy(s1, s2, SIZE_MAX); }
 char *strncpy(char *s1, const char *s2, size_t n)
 {
 	for (; n && (*s1=*s2); n--, s2++, s1++) {}
-	*s1 = '\0';
+	if (n) *s1 = '\0';
 	return s1;
 }
 
