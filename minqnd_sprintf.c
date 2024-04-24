@@ -150,6 +150,8 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 			if (conv_spec == 's')
 			{
 				const char *string = va_arg(arg, const char *);
+				if (string == NULL)
+					string = "(null)";
 
 				size_t string_len = strlen(string);
 				if (precision == -1)
