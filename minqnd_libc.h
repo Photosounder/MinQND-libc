@@ -60,6 +60,7 @@ extern double atan(double x);
 extern double atan2(double y, double x);
 extern float atan2f(float y, float x);
 extern double asin(double x);
+extern float asinf(float x);
 extern double acos(double x);
 extern double sinh(double x);
 extern double cosh(double x);
@@ -84,6 +85,7 @@ static float nearbyintf(float x) { return __builtin_nearbyintf(x); }
 static double nearbyint(double x) { return __builtin_nearbyint(x); }
 static float rintf(float x) { return __builtin_rintf(x); }
 static double rint(double x) { return __builtin_rint(x); }
+static long lroundf(float x) { return __builtin_nearbyintf(x); }
 static double fma(double x, double y, double z) { return __builtin_fma(x, y, z); }
 
 
@@ -247,6 +249,7 @@ double atan2(double y, double x)	// error < 4.5e-16 radians
 	return z;
 }
 
+float asinf(float x) { return asin(x); }
 double asin(double x)	// error < 7e-16
 {
 	double y, xa = fabs(x);
@@ -301,6 +304,7 @@ FILE *const stdin = NULL;
 FILE *const stdout = NULL;
 FILE *const stderr = NULL;
 
+
 //**** stdlib.h ****
 
 int abs(int j) { return j > 0 ? j : -j; }
@@ -347,7 +351,10 @@ void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, co
 	}
 }
 
+
 //**** string.h ****
+
+#define BULK_MEMORY_THRESHOLD 4  // 32 in WASI libc
 
 void *memset(void *dest, int c, size_t n)
 {

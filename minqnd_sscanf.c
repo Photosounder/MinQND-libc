@@ -1,6 +1,6 @@
 int vsscanf(const char *s, const char *fmt, va_list arg)
 {
-	int match_count = 0;
+	int match_count = 0, ret_eof = 1;
 	size_t f_pos, s_pos = 0;
 
 	for (f_pos=0; ; f_pos++)
@@ -8,6 +8,8 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 		if (fmt[f_pos] == '%')
 		{
 			f_pos++;
+
+			int match = 0;
 
 			// Read suppression flags
 			int flag_suppr = 0;
@@ -58,22 +60,26 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 			// Parse %
 			if (conv_spec == '%')
 				if ('%' != s[s_pos++])
-					return match_count ? match_count : EOF;
+					goto eof_reached;
 
 			// Parse char
 			if (conv_spec == 'c')
 			{
-				char *vc = va_arg(arg, char *);
 				if (flag_suppr == 0)
+				{
+					char *vc = va_arg(arg, char *);
 					*vc = s[s_pos];
+				}
 				s_pos++;
-				match_count++;
+				match = 1;
 			}
 
 			// Parse string
 			if (conv_spec == 's' || conv_spec == '[')
 			{
-				char *vs = va_arg(arg, char *);
+				char *vs;
+				if (flag_suppr == 0)
+					vs = va_arg(arg, char *);
 
 				int is, scanset_start = f_pos + 1;
 				for (is = 0; s[s_pos] && (!isspace(s[s_pos]) || conv_spec == '[') && field_width; is++, s_pos++, field_width--)
@@ -125,7 +131,7 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 				if (flag_suppr == 0)
 					vs[is] = '\0';
 
-				match_count++;
+				match = 1;
 			}
 
 			// Handle pointer
@@ -156,8 +162,8 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 			{
 				// Check validity
 				if (!isdigit(s[s_pos]))
-					return match_count ? match_count : EOF;
-				match_count++;
+					goto eof_reached;
+				match = 1;
 
 				// Read and add up digits
 				do
@@ -173,8 +179,8 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 			{
 				// Check validity
 				if (!isxdigit(s[s_pos]))
-					return match_count ? match_count : EOF;
-				match_count++;
+					goto eof_reached;
+				match = 1;
 
 				// Read and add up digits
 				do
@@ -199,8 +205,8 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 
 				// Check validity
 				if (!isdigit(s[s_pos]) && s[s_pos] != '.')
-					return match_count ? match_count : EOF;
-				match_count++;
+					goto eof_reached;
+				match = 1;
 
 				// Read and add up digits and track the dot
 				do
@@ -290,7 +296,15 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 				}
 			}
 
+			if (match)
+			{
+				ret_eof = 0;
+				if (flag_suppr == 0)
+					match_count++;
+			}
+
 			continue;
+
 		}
 
 		// Whitespace skipping
@@ -303,13 +317,15 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 
 		// Normal char matching
 		if (fmt[f_pos] != s[s_pos++])
-			return match_count ? match_count : EOF;
+			goto eof_reached;
 
 		if (fmt[f_pos] == '\0')
 			break;
 	}
 
 	return match_count;
+eof_reached:
+	return match_count || ret_eof == 0 ? match_count : EOF;
 }
 
 int sscanf(const char *s, const char *format, ...)
