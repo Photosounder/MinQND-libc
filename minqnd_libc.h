@@ -86,7 +86,16 @@ static double nearbyint(double x) { return __builtin_nearbyint(x); }
 static float rintf(float x) { return __builtin_rintf(x); }
 static double rint(double x) { return __builtin_rint(x); }
 static long lroundf(float x) { return __builtin_nearbyintf(x); }
-static double fma(double x, double y, double z) { return __builtin_fma(x, y, z); }
+static double fma(double x, double y, double z)
+{
+#if __has_builtin(__builtin_wasm_relaxed_madd_f64x2)
+	__attribute__((__vector_size__(2 * sizeof(double)))) double r2, x2 = {x}, y2 = {y}, z2 = {z};
+	r2 = __builtin_wasm_relaxed_madd_f64x2(x2, y2, z2);
+	return r2[0];
+#else
+	return x*y + z;
+#endif
+}
 
 
 //**** ctype.h ****
