@@ -138,9 +138,9 @@ static int fseek(FILE *stream, long int offset, int whence) { return EOF; }
 static long int ftell(FILE *stream) { return 0; }
 static void rewind(FILE *stream) { }
 
-extern void *memset(void *s, int c, size_t n);
-extern void *memcpy(void *s1, const void *s2, size_t n);
-extern void *memmove(void *s1, const void *s2, size_t n);
+extern void *memset(void *dest, int c, size_t n);
+extern void *memcpy(void *dest, const void *src, size_t n);
+extern void *memmove(void *dest, const void *src, size_t n);
 extern size_t strlen(const char *s);
 extern void *memchr(const void *s, int c, size_t n);
 extern void *memrchr(const void *s, int c, size_t n);
