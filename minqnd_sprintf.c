@@ -21,7 +21,7 @@ intmax_t make_power_of_10_int(int p)
 	intmax_t v = 1;
 
 	while (p >= 5)  { v *= 100000;  p -= 5; }
-	while (p >= 1)  { v *= 10;     p -= 1; }
+	while (p >= 1)  { v *= 10;      p -= 1; }
 
 	return v;
 }

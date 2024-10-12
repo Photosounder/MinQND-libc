@@ -1,10 +1,10 @@
 :toc:
 
-## Minimal quick & dirty libc for my WebAssembly modules
+== Minimal quick & dirty libc for my WebAssembly modules
 
 A one-file approach to having a libc for my WebAssembly modules. Technically there are 3 files, but two of them are virtually part of the main one due to being directly included in it, and also the allocator part is two extra files https://github.com/Photosounder/CITAlloc/[found in a separate project].
 
-### What's wrong with normal libc
+=== What's wrong with normal libc
 
 Typical libc implementations have specific priorities:
 
@@ -15,7 +15,7 @@ Typical libc implementations have specific priorities:
 
 In a way there's nothing wrong with these priorities because they're what we collectively need. But this comes at a cost. Their code is usually big and complex, even trivial functions like `memset()` have complex implementations to handle every possibility as fast as possible. As a result, not only is their code several times bigger than strictly needed, it's typically very hard to read and debug, it nests deeply and turns into a big bloated black box. Not only this, but because of the inconsiderate way they're written they might force you to include advanced functionality that you don't actually need. For instance simply calling https://github.com/WebAssembly/wasi-libc[WASI libc]'s `sprintf()` will include `fprintf()` which includes the extended WASI functionality for writing files from WebAssembly, which bothers me not only for technical reasons but also because such functionality is against my https://github.com/Photosounder/WAHE/[WAHE] philosophy (I have lots of philosophies).
 
-### The minimal, quick & dirty philosophy
+=== The minimal, quick & dirty philosophy
 
 I for one don't want all that junk, I have different, almost opposite priorities:
 
@@ -28,7 +28,7 @@ I for one don't want all that junk, I have different, almost opposite priorities
 
 In 2024 my experience with WebAssembly/link:https://github.com/Photosounder/WAHE/[WAHE] is pushing me towards a desire to make everything clean. Instead of producing obscure executables that do and contain who knows what and make a mess in their memory space I feel a need to produce clean, minimal binaries whose binary contents are well understood by me and whose memory is clean, well-maintained (for instance free memory is blanked so that only current data would be seen), mappable and visualisable in real time and even directly readable at the byte level. I no longer want to do everything blindly like everybody else, vaguely assuming what's going on without really knowing, without an awareness of what's really in the binary and the memory, where it's all located, how it's laid out and what it looks like. When you see all of this you realise the absurdity of both your code and the libc implementation you rely on, and the next step is to do something about it.
 
-### The rejection of rules and priorities
+=== The rejection of rules and priorities
 
 One aspect of this philosophy relates to my more general philosophy of not optimising for anything specific. Optimising for something specific has a cost, the more you optimise extremely for something specific the more everything else gets sacrificed and suffers. This is very general and not specific to computer science, but it's easy to see how it applies to code: optimising for one of speed, accuracy, standard compliance, fallback exhaustiveness, safety and simplicity at the expense of everything else will make everything else suffer and, except in the case of simplicity, lead to very complicated and unreadable code. And many programmers adhere to strict rules that say they must do this and can't do that, so such rules are a form of extreme optimisation priority, everything must be sacrificed to respect those rules.
 
@@ -36,7 +36,7 @@ This philosophy is not about simplifying to an absurd degree, it's about not rea
 
 The power of this philosophy is in getting things done. I'm just one guy and I want to do a lot of quality things by myself. A libc implementation is a great subject to put this philosophy to the test, because you can't make the smallest, simplest, least bloated libc while also making the fastest, most mathematically accurate and standard compliant libc, but you can make a high quality libc that is fairly simple, small, unbloated, yet fast, reasonably accurate and sufficiently standard compliant for your own needs, and you can do it quickly (well, at least I can).
 
-### It wasn't hard to create
+=== It wasn't hard to create
 
 Creating your own libc sounds like a herculean undertaking, but not so with this philosophy. In just a few days I had all the functions I needed so I could compile and run an already existing module:
 
@@ -48,7 +48,7 @@ Creating your own libc sounds like a herculean undertaking, but not so with this
 
 It was quick, it's dirty (although not as dirty as some libc implementations I've found), it does what I need correctly, as simply as possible and more accurately than truly needed. As I need more, I will add more, but because it will be mainly in new separate functions it won't actually bloat up my existing modules as the functions it doesn't need won't be linked.
 
-### Binary size
+=== Binary size
 
 For a WebAssembly module that calls `sin()`, `cos()` and `exp()` and uses `sscanf()` and `sprintf()` to read and print decimal and hexadecimal integers, `double` values and match words, I get a 12.8 kB 32-bit WASM file:
 
@@ -61,7 +61,7 @@ For a WebAssembly module that calls `sin()`, `cos()` and `exp()` and uses `sscan
 
 The module's map looks clear and clean, there's no function included that isn't truly needed, and unlike the same module built with WASI libc it's not a 59 kB mess.
 
-### Look at the code
+=== Look at the code
 
 Look at it, it's nice. You won't often see a `cos()` implementation this straightforward.
 
@@ -89,7 +89,7 @@ Truly original and unique function implementations worth looking at:
 * `erf()` which uses an actually fairly common 1 - polynomial^-8^ approach.
 * `qsort()`, which is not my own work at all, but I looked hard for the best algorithm to suit this library and this one is nice for being small without being too inefficient. It's a philosophical choice, it's not as fast as multi-function recursive algorithms that are too complicated, and it's not as absurdly slow as even simpler algorithms.
 
-## How to use it
+== How to use it
 
 I use it along with CIT Alloc and my default WAHE-related headers in WebAssembly modules by writing this at the top of the module's C file:
 
