@@ -210,8 +210,8 @@ double exp2(double x)
 	if (x > 1024.)	return INFINITY;
 
 	// Calculate the integer exponent part so that ye = 2^xe
-	int64_t xe = floor(x);
-	double ye = int_as_double((xe + 1023) << 52);
+	double xe = floor(x);
+	double ye = int_as_double(((int64_t) xe + 1023) << 52);
 
 	// Fractional part, yf = 2^xf, error < 2.3e-16
 	double xf = x - xe;
