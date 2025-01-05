@@ -32,8 +32,9 @@
 #define INFINITY (1./0.)
 #define M_PI 3.141592653589793
 
-static inline uint32_t float_as_int(float f) { union {float f; uint32_t i;} u; u.f = f; return u.i; }
+static inline uint32_t float_as_int(float f)   { union {float f;  uint32_t i;} u; u.f = f; return u.i; }
 static inline uint64_t double_as_int(double f) { union {double f; uint64_t i;} u; u.f = f; return u.i; }
+static inline float int_as_float(uint32_t i)   { union {float f;  uint32_t i;} u; u.i = i; return u.f; }
 static inline double int_as_double(uint64_t i) { union {double f; uint64_t i;} u; u.i = i; return u.f; }
 #define isnan(x) ( \
 		sizeof(x) == sizeof(float) ? (float_as_int(x) & 0x7fffffff) > 0x7f800000 : \
@@ -85,6 +86,7 @@ static float nearbyintf(float x) { return __builtin_nearbyintf(x); }
 static double nearbyint(double x) { return __builtin_nearbyint(x); }
 static float rintf(float x) { return __builtin_rintf(x); }
 static double rint(double x) { return __builtin_rint(x); }
+static double round(double x) { return __builtin_nearbyint(x); }
 static long lroundf(float x) { return __builtin_nearbyintf(x); }
 static double fma(double x, double y, double z)
 {
@@ -112,7 +114,11 @@ extern int tolower(int c);
 //**** stdio.h ****
 
 #include <stddef.h>	// for NULL
+#if (__POINTER_WIDTH__ == 64)
+#define size_t unsigned long long
+#else
 #define size_t unsigned long	// correct on wasm32 and wasm64
+#endif
 #define EOF (-1)
 #define SEEK_SET 0
 #define SEEK_CUR 1
@@ -172,6 +178,7 @@ extern double strtod(const char *nptr, char **endptr);
 extern void srand(unsigned int seed);
 extern int rand(void);
 extern void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *));
+extern void abort(void);
 
 
 //**** time.h ****
@@ -191,7 +198,11 @@ extern size_t strftime(char * restrict s, size_t maxsize, const char *format, co
 
 //**** Other ****
 
+#if (__POINTER_WIDTH__ == 64)
+typedef long long ssize_t;
+#else
 typedef long ssize_t;
+#endif
 
 #endif // MINQND_LIBC_H
 
@@ -360,6 +371,8 @@ void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, co
 	}
 }
 
+void abort(void) { __builtin_trap(); }
+
 
 //**** string.h ****
 
@@ -501,6 +514,7 @@ size_t strftime(char * restrict s, size_t maxsize, const char *format, const str
 
 //**** crt1-reactor.c ****
 
+#ifdef __wasm__
 extern void __wasm_call_ctors(void);
 __attribute__((export_name("_initialize"))) void _initialize(void)
 {
@@ -509,5 +523,6 @@ __attribute__((export_name("_initialize"))) void _initialize(void)
 	initialized = 1;
 	__wasm_call_ctors();
 }
+#endif
 
 #endif // MINQND_LIBC_IMPLEMENTATION
