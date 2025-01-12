@@ -113,18 +113,13 @@ extern int tolower(int c);
 
 //**** stdio.h ****
 
-#include <stddef.h>	// for NULL
-#if (__POINTER_WIDTH__ == 64)
-#define size_t unsigned long long
-#else
-#define size_t unsigned long	// correct on wasm32 and wasm64
-#endif
+#include <stddef.h>	// for NULL and size_t
 #define EOF (-1)
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
 
-#define va_list __builtin_va_list
+#define va_list		__builtin_va_list
 #define va_start(v,l)   __builtin_va_start(v,l)
 #define va_end(v)       __builtin_va_end(v)
 #define va_arg(v,l)     __builtin_va_arg(v,l)
