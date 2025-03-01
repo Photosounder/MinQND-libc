@@ -193,7 +193,7 @@ extern size_t strftime(char * restrict s, size_t maxsize, const char *format, co
 
 //**** Other ****
 
-#if (__POINTER_WIDTH__ == 64)
+#if INTPTR_MAX == INT64_MAX
 typedef long long ssize_t;
 #else
 typedef long ssize_t;
