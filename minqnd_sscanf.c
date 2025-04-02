@@ -203,6 +203,24 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 			{
 				int dot_exp = 1;
 
+				// Check NAN
+				if (tolower(s[s_pos]) == 'n' && tolower(s[s_pos+1]) == 'a' && tolower(s[s_pos+2]) == 'n')
+				{
+					match = 1;
+					vf = NAN;
+					s_pos += 3;
+					goto float_conv_end;
+				}
+
+				// Check INF
+				if (tolower(s[s_pos]) == 'i' && tolower(s[s_pos+1]) == 'n' && tolower(s[s_pos+2]) == 'f')
+				{
+					match = 1;
+					vf = INFINITY;
+					s_pos += 3;
+					goto float_conv_end;
+				}
+
 				// Check validity
 				if (!isdigit(s[s_pos]) && s[s_pos] != '.')
 					goto eof_reached;
@@ -257,6 +275,7 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 				// Apply exponent
 				vf = apply_power_of_10(vf, dot_exp);
 			}
+float_conv_end:
 
 			// Apply sign
 			if (neg)
