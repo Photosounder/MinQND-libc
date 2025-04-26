@@ -345,24 +345,30 @@ int rand(void)
 }
 
 void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *))
-{	// Ray Gardner's 1990 public domain shell sort
-	size_t wnel, gap, wgap, i, j, k;
+{
+	size_t wnel, gap, wgap, i, j, s;
 	char *a, *b, tmp;
+	if (size == 0) return;
 	wnel = size * nmemb;
-	for (gap = 0; ++gap < nmemb;) gap *= 3;
-	while ((gap /= 3) != 0)
+	gap = nmemb;
+	while (gap > 1)
 	{
+		gap = (5ull * gap - 1) / 11;
+		if (gap == 0) gap = 1;
+
 		wgap = size * gap;
+		__builtin_assume(wgap < wnel);
 		for (i = wgap; i < wnel; i += size)
-			for (j = i - wgap; ;j -= wgap)
+		{
+			for (j = i; !__builtin_sub_overflow(j, wgap, &j);)
 			{
 				a = j + (char *)base;
 				b = a + wgap;
-				if ((*compar)(a, b) <= 0) break;
-				k = size;
-				do { tmp = *a; *a++ = *b; *b++ = tmp; } while (--k);
-				if (j < wgap) break;
+				if (compar(a, b) <= 0) break;
+				s = size;
+				do { tmp = *a; *a++ = *b; *b++ = tmp; } while (--s);
 			}
+		}
 	}
 }
 
