@@ -74,6 +74,8 @@ extern double tgamma(double x);
 extern double erf(double x);
 extern double fmin(double x, double y);
 extern double fmax(double x, double y);
+extern float fminf(float x, float y);
+extern float fmaxf(float x, float y);
 
 static float fabsf(float x) { return __builtin_fabsf(x); }
 static double fabs(double x) { return __builtin_fabs(x); }
@@ -99,6 +101,21 @@ static double fma(double x, double y, double z)
 	__attribute__((__vector_size__(2 * sizeof(double)))) double r2, x2 = {x}, y2 = {y}, z2 = {z};
 	r2 = __builtin_wasm_relaxed_madd_f64x2(x2, y2, z2);
 	return r2[0];
+#elif defined(__has_builtin) && __has_builtin(__builtin_elementwise_fma)
+	return __builtin_elementwise_fma(x, y, x);
+#else
+	return x*y + z;
+#endif
+}
+
+static float fmaf(float x, float y, float z)
+{
+#if __has_builtin(__builtin_wasm_relaxed_madd_f32x4)
+	__attribute__((__vector_size__(4 * sizeof(float)))) float r4, x4 = {x}, y4 = {y}, z4 = {z};
+	r4 = __builtin_wasm_relaxed_madd_f32x4(x4, y4, z4);
+	return r4[0];
+#elif defined(__has_builtin) && __has_builtin(__builtin_elementwise_fma)
+	return __builtin_elementwise_fma(x, y, x);
 #else
 	return x*y + z;
 #endif
@@ -306,29 +323,43 @@ double erf(double x)	// error < 1.5e-15
 	return copysign(1. - 1./y, x);
 }
 
+#define MINN(a, b) ((a) < (b) ? (a) : (b))
+#define MAXN(a, b) ((a) > (b) ? (a) : (b))
+
 double fmin(double x, double y)
 {
-	if (isnan(x))
-		return y;
-	if (isnan(y))
-		return x;
-	/* handle signed zeros, see C99 Annex F.9.9.2 */
-	if (signbit(x) != signbit(y))
-		return signbit(x) ? x : y;
-	return x < y ? x : y;
+	if (isnan(x)) return y;
+	if (isnan(y)) return x;
+	if (signbit(x) != signbit(y)) return signbit(x) ? x : y;
+	return MINN(x, y);
 }
 
 double fmax(double x, double y)
 {
-	if (isnan(x))
-		return y;
-	if (isnan(y))
-		return x;
-	/* handle signed zeros, see C99 Annex F.9.9.2 */
-	if (signbit(x) != signbit(y))
-		return signbit(x) ? y : x;
-	return x < y ? y : x;
+	if (isnan(x)) return y;
+	if (isnan(y)) return x;
+	if (signbit(x) != signbit(y)) return signbit(x) ? y : x;
+	return MAXN(x, y);
 }
+
+float fminf(float x, float y)
+{
+	if (isnan(x)) return y;
+	if (isnan(y)) return x;
+	if (signbit(x) != signbit(y)) return signbit(x) ? x : y;
+	return MINN(x, y);
+}
+
+float fmaxf(float x, float y)
+{
+	if (isnan(x)) return y;
+	if (isnan(y)) return x;
+	if (signbit(x) != signbit(y)) return signbit(x) ? y : x;
+	return MAXN(x, y);
+}
+
+#undef MINN
+#undef MAXN
 
 
 //**** ctype.h ****
