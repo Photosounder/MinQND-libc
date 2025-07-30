@@ -42,6 +42,9 @@ static inline double int_as_double(uint64_t i) { union {double f; uint64_t i;} u
 #define isfinite(x) ( \
 		sizeof(x) == sizeof(float) ? (float_as_int(x) & 0x7fffffff) < 0x7f800000 : \
 		sizeof(x) == sizeof(double) ? (double_as_int(x) & -1ULL>>1) < 0x7ffULL<<52 : 1)
+#define signbit(x) ( \
+	sizeof(x) == sizeof(float) ? (int)(float_as_int(x)>>31) : \
+	sizeof(x) == sizeof(double) ? (int)(double_as_int(x)>>63) : 0)
 
 extern double fmod(double x, double y);
 extern double exp(double x);
@@ -69,6 +72,8 @@ extern double tanh(double x);
 extern double hypot(double x, double y);
 extern double tgamma(double x);
 extern double erf(double x);
+extern double fmin(double x, double y);
+extern double fmax(double x, double y);
 
 static float fabsf(float x) { return __builtin_fabsf(x); }
 static double fabs(double x) { return __builtin_fabs(x); }
@@ -299,6 +304,30 @@ double erf(double x)	// error < 1.5e-15
 	y = (((((((((((((((((((((3.847446425233e-15*xa - 1.67842955663171e-13)*xa + 3.477665942359862e-12)*xa - 4.5278406665374846e-11)*xa + 4.1431968115923484e-10)*xa - 2.8191376405557979e-09)*xa + 1.4694293215089563e-08)*xa - 5.9193430766414834e-08)*xa + 1.817739597449057e-07)*xa - 3.9725626384852649e-07)*xa + 4.713180470756501e-07)*xa + 4.889167169868577e-07)*xa - 3.217811989057157e-06)*xa + 6.5040168714717147e-06)*xa + 1.641819587052259e-05)*xa - 2.883536587780375e-05)*xa + 0.00034381014214142996)*xa + 0.0012709605848389835)*xa + 0.0033952701135075287)*xa + 0.024538445328735638)*xa + 0.08952465548981831)*xa + 0.14104739588692786)*xa + 1.;
 	y = y*y; y = y*y; y = y*y;	// y = 1 - y^-8
 	return copysign(1. - 1./y, x);
+}
+
+double fmin(double x, double y)
+{
+	if (isnan(x))
+		return y;
+	if (isnan(y))
+		return x;
+	/* handle signed zeros, see C99 Annex F.9.9.2 */
+	if (signbit(x) != signbit(y))
+		return signbit(x) ? x : y;
+	return x < y ? x : y;
+}
+
+double fmax(double x, double y)
+{
+	if (isnan(x))
+		return y;
+	if (isnan(y))
+		return x;
+	/* handle signed zeros, see C99 Annex F.9.9.2 */
+	if (signbit(x) != signbit(y))
+		return signbit(x) ? y : x;
+	return x < y ? y : x;
 }
 
 
