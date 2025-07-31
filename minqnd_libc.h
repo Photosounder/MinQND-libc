@@ -97,7 +97,7 @@ static double round(double x) { return __builtin_nearbyint(x); }
 static long lroundf(float x) { return __builtin_nearbyintf(x); }
 static double fma(double x, double y, double z)
 {
-#if __has_builtin(__builtin_wasm_relaxed_madd_f64x2)
+#if defined(__has_builtin) && __has_builtin(__builtin_wasm_relaxed_madd_f64x2)
 	__attribute__((__vector_size__(2 * sizeof(double)))) double r2, x2 = {x}, y2 = {y}, z2 = {z};
 	r2 = __builtin_wasm_relaxed_madd_f64x2(x2, y2, z2);
 	return r2[0];
@@ -110,7 +110,7 @@ static double fma(double x, double y, double z)
 
 static float fmaf(float x, float y, float z)
 {
-#if __has_builtin(__builtin_wasm_relaxed_madd_f32x4)
+#if defined(__has_builtin) && __has_builtin(__builtin_wasm_relaxed_madd_f32x4)
 	__attribute__((__vector_size__(4 * sizeof(float)))) float r4, x4 = {x}, y4 = {y}, z4 = {z};
 	r4 = __builtin_wasm_relaxed_madd_f32x4(x4, y4, z4);
 	return r4[0];
