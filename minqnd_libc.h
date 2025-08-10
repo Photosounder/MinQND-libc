@@ -23,7 +23,11 @@
   #define __PRI64  "ll"
   #define __PRIPTR ""
 #endif
-#define PRIdMAX __PRI64 "d"
+#define PRId64 __PRI64 "d"
+#define PRIx64 __PRI64 "x"
+#define PRIX64 __PRI64 "X"
+#define PRIdMAX PRId64
+#define PRIxMAX PRIx64
 
 
 //**** math.h ****
@@ -131,6 +135,7 @@ extern int isalpha(int c);
 extern int isalnum(int c);
 extern int isupper(int c);
 extern int tolower(int c);
+extern int isprint(int c);
 
 
 //**** stdio.h ****
@@ -323,15 +328,15 @@ double erf(double x)	// error < 1.5e-15
 	return copysign(1. - 1./y, x);
 }
 
-#define MINN(a, b) ((a) < (b) ? (a) : (b))
-#define MAXN(a, b) ((a) > (b) ? (a) : (b))
+#define _MINN(a, b) ((a) < (b) ? (a) : (b))
+#define _MAXN(a, b) ((a) > (b) ? (a) : (b))
 
 double fmin(double x, double y)
 {
 	if (isnan(x)) return y;
 	if (isnan(y)) return x;
 	if (signbit(x) != signbit(y)) return signbit(x) ? x : y;
-	return MINN(x, y);
+	return _MINN(x, y);
 }
 
 double fmax(double x, double y)
@@ -339,7 +344,7 @@ double fmax(double x, double y)
 	if (isnan(x)) return y;
 	if (isnan(y)) return x;
 	if (signbit(x) != signbit(y)) return signbit(x) ? y : x;
-	return MAXN(x, y);
+	return _MAXN(x, y);
 }
 
 float fminf(float x, float y)
@@ -347,7 +352,7 @@ float fminf(float x, float y)
 	if (isnan(x)) return y;
 	if (isnan(y)) return x;
 	if (signbit(x) != signbit(y)) return signbit(x) ? x : y;
-	return MINN(x, y);
+	return _MINN(x, y);
 }
 
 float fmaxf(float x, float y)
@@ -355,11 +360,11 @@ float fmaxf(float x, float y)
 	if (isnan(x)) return y;
 	if (isnan(y)) return x;
 	if (signbit(x) != signbit(y)) return signbit(x) ? y : x;
-	return MAXN(x, y);
+	return _MAXN(x, y);
 }
 
-#undef MINN
-#undef MAXN
+#undef _MINN
+#undef _MAXN
 
 
 //**** ctype.h ****
@@ -371,6 +376,7 @@ int isalpha(int c) { return ((unsigned)c|32)-'a' < 26; }
 int isalnum(int c) { return isalpha(c) || isdigit(c); }
 int isupper(int c) { return (unsigned)c-'A' < 26; }
 int tolower(int c) { if (isupper(c)) return c | 32; return c; }
+int isprint(int c) { return (unsigned)c-0x20 < 0x5f; }
 
 
 //**** stdio.h ****
