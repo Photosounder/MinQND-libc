@@ -6,8 +6,9 @@ double make_power_of_10(int p)
 	if (neg)
 		p = -p;
 
-	while (p >= 25) { v *= 1e25; p -= 25; }
-	while (p >= 5)  { v *= 1e5;  p -= 5; }
+	while (p >= 68) { v *= 1e68; p -= 68; }
+	while (p >= 20) { v *= 1e20; p -= 20; }
+	while (p >= 4)  { v *= 1e4;  p -= 4; }
 	while (p >= 1)  { v *= 10.;  p -= 1; }
 
 	if (neg)
@@ -247,29 +248,54 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 			}
 
 			// Print hexadecimal
-			if (conv_spec == 'x' || conv_spec == 'X')
+			if (conv_spec == 'x' || conv_spec == 'X' || conv_spec == 'o')
 			{
-				// Print 0x
-				if (flag_alt && vu)
+				int is_hex = (conv_spec == 'x' || conv_spec == 'X');
+
+				// Toggle printing 0x
+				int print_0x = 0;
+				if (flag_alt && vu && is_hex)
 				{
-					if (s_pos++<s_len) s[s_pos-1] = '0';
-					if (s_pos++<s_len) s[s_pos-1] = conv_spec;
+					print_0x = 1;
+					field_width -= 2;
 				}
 
-				if (vu == 0)
-					if (s_pos++<s_len) s[s_pos-1] = '0';
-
-				int print_zeroes = 0;
+				int print_zeroes = 0, print_spaces = 0;
 
 				// Print digits
-				for (int sh = sizeof(uintmax_t)*8-4; sh >= 0; sh-=4)
+				int sh_inc = is_hex ? 4 : 3;
+				int sh_mask = is_hex ? 0xF : 0x7;
+				for (int sh = ((sizeof(uintmax_t)*8 + sh_inc-1) / sh_inc - 1) * sh_inc; sh >= 0; sh -= sh_inc)
 				{
-					int d = (vu >> sh) & 0xF;
+					int d = (vu >> sh) & sh_mask;
 
+					// When entering the padding width, TODO: take flag_left_just into account
+					if (sh / sh_inc < field_width)
+					{
+						if (flag_zero_pad)		// toggle printing zeroes
+							print_zeroes = 1;
+						else				// or toggle printing spaces
+							print_spaces = 1;
+					}
+
+					// Toggle printing zeroes if a non-zero digit occurs
+					if (d)
+						print_zeroes = 1;
+
+					// Allow printing 0 at the last digit
+					if (sh == 0)
+						print_zeroes = 1;
+
+					// Print hex digit
 					if (d || print_zeroes)
 					{
-						if (d)
-							print_zeroes = 1;
+						// Print 0x
+						if (print_0x)
+						{
+							print_0x = 0;
+							if (s_pos++<s_len) s[s_pos-1] = '0';
+							if (s_pos++<s_len) s[s_pos-1] = conv_spec;
+						}
 
 						if (d < 10)
 						{
@@ -279,6 +305,11 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 						{
 							if (s_pos++<s_len) s[s_pos-1] = (conv_spec == 'X' ? 'A' : 'a') + d - 10;
 						}
+					}
+					// Print space
+					else if (print_spaces)
+					{
+						if (s_pos++<s_len) s[s_pos-1] = ' ';
 					}
 				}
 			}
