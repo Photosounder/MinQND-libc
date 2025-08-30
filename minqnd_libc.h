@@ -29,6 +29,8 @@
 #define PRIdMAX PRId64
 #define PRIxMAX PRIx64
 
+#define SCNu8 "hhu"
+
 
 //**** math.h ****
 
@@ -98,7 +100,7 @@ static double nearbyint(double x) { return __builtin_nearbyint(x); }
 static float rintf(float x) { return __builtin_rintf(x); }
 static double rint(double x) { return __builtin_rint(x); }
 static double round(double x) { return __builtin_nearbyint(x); }
-static long lroundf(float x) { return __builtin_nearbyintf(x); }
+static long lroundf(float x) { return (long) __builtin_nearbyintf(x); }
 static double fma(double x, double y, double z)
 {
 #if defined(__has_builtin) && __has_builtin(__builtin_wasm_relaxed_madd_f64x2)
@@ -106,7 +108,7 @@ static double fma(double x, double y, double z)
 	r2 = __builtin_wasm_relaxed_madd_f64x2(x2, y2, z2);
 	return r2[0];
 #elif defined(__has_builtin) && __has_builtin(__builtin_elementwise_fma)
-	return __builtin_elementwise_fma(x, y, x);
+	return __builtin_elementwise_fma(x, y, z);
 #else
 	return x*y + z;
 #endif
@@ -119,7 +121,7 @@ static float fmaf(float x, float y, float z)
 	r4 = __builtin_wasm_relaxed_madd_f32x4(x4, y4, z4);
 	return r4[0];
 #elif defined(__has_builtin) && __has_builtin(__builtin_elementwise_fma)
-	return __builtin_elementwise_fma(x, y, x);
+	return __builtin_elementwise_fma(x, y, z);
 #else
 	return x*y + z;
 #endif
