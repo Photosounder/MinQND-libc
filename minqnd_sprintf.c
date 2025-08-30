@@ -70,10 +70,10 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 			{
 				switch (fmt[f_pos])
 				{
-						case '-': flag_left_just = 1;
+					/*	case '-': flag_left_just = 1;	TODO use these
 					break;	case '+': flag_plus = 1;
 					break;	case ' ': flag_space = 1;
-					break;	case '#': flag_alt = 1;
+					break;	*/case '#': flag_alt = 1;
 					break;	case '0': flag_zero_pad = 1;
 				}
 				f_pos++;
@@ -108,7 +108,7 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 					precision = va_arg(arg, int);
 					f_pos++;
 				}
-				if (fmt[f_pos] >= '1' && fmt[f_pos] <= '9')
+				if (fmt[f_pos] >= '0' && fmt[f_pos] <= '9')
 				{
 					precision = fmt[f_pos] - '0';
 					f_pos++;
@@ -323,7 +323,7 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 				double v = va_arg(arg, double);
 
 				// Print and remove sign
-				if (v < 0.)
+				if (double_as_int(v) & 0x8000000000000000)
 				{
 					if (s_pos++<s_len) s[s_pos-1] = '-';
 					v = -v;
@@ -387,6 +387,8 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 
 					if (conv_spec == 'f')
 					{
+						if (start_lvl < 0)
+							start_lvl = 0;
 						dot_lvl = 0;
 						end_lvl = -precision - 1;
 					}
@@ -418,7 +420,7 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 						last_pos = s_pos;
 
 					// Print dot
-					if (i == dot_lvl)
+					if (i == dot_lvl && i != end_lvl+1)
 					{
 						last_pos = s_pos;
 						if (s_pos++<s_len) s[s_pos-1] = '.';
