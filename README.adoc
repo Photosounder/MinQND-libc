@@ -43,7 +43,7 @@ Creating your own libc sounds like a herculean undertaking, but not so with this
 * A lot of basic functions are defined as builtins, for instance `__builtin_sqrt` for `sqrt()`, so those were dead simple to add.
 * I adapted many of the most trivial functions like the functions defined in `ctype.h` and `string.h` from https://github.com/WebAssembly/wasi-libc[WASI libc] (which themselves come from other libraries) and cut out the bloat, such as removing https://github.com/WebAssembly/wasi-libc/blob/a2ed34e8107d906337d8b1b88be84f9186d56342/libc-top-half/musl/src/string/memcpy.c[the bulk of `memcpy()`] that deals with optimally copying words as a fallback to the builtin implementation.
 * I made approximations for mathematical functions like `exp()`, `log()`, `cos()`, `atan2()`, `asin()` that are surprisingly simple, very fast compared to typical libc approximations that focus on maximal accuracy, yet with very decent accuracy to a few https://en.wikipedia.org/wiki/Unit_in_the_last_place[ULPs] which makes them a very good compromise for most cases.
-* What took me the longest, unsurprisingly, are my fully original implementations of `vsnprintf()` and `vsscanf()`, which in accordance with my new philosophy are simple, only contain the features I currently need (no `%a` nor `%o` support for instance, I've never needed those) but still work just like the original for my use cases.
+* What took me the longest, unsurprisingly, are my fully original implementations of `vsnprintf()` and `vsscanf()`, which in accordance with my new philosophy are simple, only contain the features I currently need (no `%a` for instance, I've never needed this) but still work just like the original for my use cases.
 * I already have my own allocator called the https://github.com/Photosounder/CITAlloc/[Compact Info Table Allocator] which I use in parallel to this.
 
 It was quick, it's dirty (although not as dirty as some libc implementations I've found), it does what I need correctly, as simply as possible and more accurately than truly needed. As I need more, I will add more, but because it will be mainly in new separate functions it won't actually bloat up my existing modules as the functions it doesn't need won't be linked.
@@ -67,7 +67,7 @@ Look at it, it's nice. You won't often see a `cos()` implementation this straigh
 
 Truly original and unique function implementations worth looking at:
 
-* `vsnprintf()` (the basis for `sprintf()`) which relies on a very nice `get_power_of_10_exponent()` to calculate digit counts. Supports `%c`, `%s`, `%d` `%i` `%u` `%x` `%p`, `%g` `%f` `%e` with results that agree with an exact implementation up to about 17 digits, after that I get something different (I have no idea how default implementations are so accurate).
+* `vsnprintf()` (the basis for `sprintf()`) which relies on a very nice `get_power_of_10_exponent()` to calculate digit counts. Supports `%c`, `%s`, `%d` `%i` `%u` `%o` `%x` `%p`, `%g` `%f` `%e` with results that agree with an exact implementation up to about 17 digits, after that I get something different (I have no idea how default implementations are so accurate).
 * `vsscanf()` (the basis for `sscanf()`). Supports `%n`, `%c`, `%s` `%[]` `%[^]`, `%d` `%i` `%u` `%x` `%p`, `%g` `%f` `%e`.
 * `exp2()` which works by directly calculating the IEEE-754 exponent of the result and calculating the rest by polynomial.
 * `log2()` which works by taking the IEEE-754 exponent of the input which directly gives part of the result and applying a polynomial to the mantissa.
