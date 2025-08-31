@@ -412,6 +412,10 @@ int rand(void)
 	return libc_rand_seed >> 33;
 }
 
+#if defined(__GNUC__) && __GNUC__ >= 13
+  #define __builtin_assume(...) __attribute__((__assume__(__VA_ARGS__)))
+#endif
+
 void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *))
 {
 	size_t wnel, gap, wgap, i, j, s;
