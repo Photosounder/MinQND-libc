@@ -269,6 +269,8 @@ double log10(double x) { return log2(x) * 0.3010299956639812; }
 double pow(double x, double y) { return exp2(log2(x) * y); }
 double cbrt(double x) { return pow(x, 1./3.); }
 
+float sinf(float x) { return sin(x); }
+float cosf(float x) { return cos(x); }
 double sin(double x) { return sin_tr(x * (1./(2.*M_PI))); }
 double cos(double x) { return cos_tr(x * (1./(2.*M_PI))); }
 double sin_tr(double x) { return cos_tr(x - 0.25); }
