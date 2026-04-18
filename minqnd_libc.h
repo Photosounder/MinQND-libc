@@ -61,6 +61,10 @@ extern double log2(double x);
 extern double log10(double x);
 extern double pow(double x, double y);
 extern double cbrt(double x);
+extern float sinf(float x);
+extern float cosf(float x);
+extern float sin_trf(double x);
+extern float cos_trf(double x);
 extern double sin(double x);
 extern double cos(double x);
 extern double sin_tr(double x);
@@ -269,8 +273,16 @@ double log10(double x) { return log2(x) * 0.3010299956639812; }
 double pow(double x, double y) { return exp2(log2(x) * y); }
 double cbrt(double x) { return pow(x, 1./3.); }
 
-float sinf(float x) { return sin(x); }
-float cosf(float x) { return cos(x); }
+float sinf(float x) { return sin_trf((double) x * (1./(2.*M_PI))); }
+float cosf(float x) { return cos_trf((double) x * (1./(2.*M_PI))); }
+float sin_trf(double x) { return cos_trf(x - 0.25); }
+float cos_trf(double x)
+{
+	x = fabs(x - floor(x) - 0.5) - 0.25;	// x --> [-0.25 , 0.25]
+	double x2 = x * x;
+	return ((((39.53581*x2 - 76.54966)*x2 +	81.601)*x2 - 41.34165)*x2 + 6.283185)*x;
+}
+
 double sin(double x) { return sin_tr(x * (1./(2.*M_PI))); }
 double cos(double x) { return cos_tr(x * (1./(2.*M_PI))); }
 double sin_tr(double x) { return cos_tr(x - 0.25); }
