@@ -220,6 +220,11 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 					if (s_pos++<s_len) s[s_pos-1] = '-';
 					vi = -vi;
 				}
+				// Print an explicit plus sign for positive signed values.
+				else if (flag_plus)
+				{
+					if (s_pos++<s_len) s[s_pos-1] = '+';
+				}
 
 				// Print a single digit for zero.
 				if (vi == 0)
@@ -347,6 +352,11 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 				{
 					if (s_pos++<s_len) s[s_pos-1] = '-';
 					v = -v;
+				}
+				// Print an explicit plus sign for positive floating values.
+				else if (flag_plus)
+				{
+					if (s_pos++<s_len) s[s_pos-1] = '+';
 				}
 
 				// Zero
