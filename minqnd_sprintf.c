@@ -70,10 +70,10 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 			{
 				switch (fmt[f_pos])
 				{
-					/*	case '-': flag_left_just = 1;	TODO use these
+						case '-': flag_left_just = 1;
 					break;	case '+': flag_plus = 1;
 					break;	case ' ': flag_space = 1;
-					break;	*/case '#': flag_alt = 1;
+					break;	case '#': flag_alt = 1;
 					break;	case '0': flag_zero_pad = 1;
 				}
 				f_pos++;
@@ -95,6 +95,12 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 					field_width = field_width*10 + fmt[f_pos] - '0';
 					f_pos++;
 				}
+			}
+			// Treat negative dynamic widths as left-justified positive widths.
+			if (field_width < 0)
+			{
+				flag_left_just = 1;
+				field_width = -field_width;
 			}
 
 			// Read precision
@@ -135,6 +141,7 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 
 			// Read conversion specifier
 			char conv_spec = fmt[f_pos];
+			size_t conv_start = s_pos;
 
 			// Print %
 			if (conv_spec == '%')
@@ -161,7 +168,7 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 					precision = string_len;
 
 				// Print padding
-				if (field_width)
+				if (field_width && !flag_left_just)
 					for (int i=0; i < field_width - precision; i++)
 						if (s_pos++<s_len) s[s_pos-1] = ' ';
 
@@ -214,36 +221,48 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 					vi = -vi;
 				}
 
+				// Print a single digit for zero.
 				if (vi == 0)
-					if (s_pos++<s_len) s[s_pos-1] = '0';
-
-				int e10 = get_power_of_10_exponent(vi);
-
-				// Print digits
-				for (; e10 >= 0; e10--)
 				{
-					intmax_t p = make_power_of_10_int(e10);
-					int d = vi / p;
-					if (s_pos++<s_len) s[s_pos-1] = '0' + d;
-					vi -= d * p;
+					if (s_pos++<s_len) s[s_pos-1] = '0';
+				}
+				// Print the remaining digits only for non-zero values.
+				else
+				{
+					int e10 = get_power_of_10_exponent(vi);
+
+					// Print digits
+					for (; e10 >= 0; e10--)
+					{
+						intmax_t p = make_power_of_10_int(e10);
+						int d = vi / p;
+						if (s_pos++<s_len) s[s_pos-1] = '0' + d;
+						vi -= d * p;
+					}
 				}
 			}
 
 			// Print unsigned decimal
 			if (conv_spec == 'u')
 			{
+				// Print a single digit for zero.
 				if (vu == 0)
-					if (s_pos++<s_len) s[s_pos-1] = '0';
-
-				int e10 = get_power_of_10_exponent(vu);
-
-				// Print digits
-				for (; e10 >= 0; e10--)
 				{
-					uintmax_t p = make_power_of_10_int(e10);
-					unsigned int d = vu / p;
-					if (s_pos++<s_len) s[s_pos-1] = '0' + d;
-					vu -= d * p;
+					if (s_pos++<s_len) s[s_pos-1] = '0';
+				}
+				// Print the remaining digits only for non-zero values.
+				else
+				{
+					int e10 = get_power_of_10_exponent(vu);
+
+					// Print digits
+					for (; e10 >= 0; e10--)
+					{
+						uintmax_t p = make_power_of_10_int(e10);
+						unsigned int d = vu / p;
+						if (s_pos++<s_len) s[s_pos-1] = '0' + d;
+						vu -= d * p;
+					}
 				}
 			}
 
@@ -257,7 +276,8 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 				if (flag_alt && vu && is_hex)
 				{
 					print_0x = 1;
-					field_width -= 2;
+					if (!flag_left_just)
+						field_width -= 2;
 				}
 
 				int print_zeroes = 0, print_spaces = 0;
@@ -269,8 +289,8 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 				{
 					int d = (vu >> sh) & sh_mask;
 
-					// When entering the padding width, TODO: take flag_left_just into account
-					if (sh / sh_inc < field_width)
+					// Start right-padding only when left justification is off.
+					if (!flag_left_just && sh / sh_inc < field_width)
 					{
 						if (flag_zero_pad)		// toggle printing zeroes
 							print_zeroes = 1;
@@ -449,6 +469,11 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 			end_double:;
 			}
 
+			// Pad left-justified conversions up to the requested field width.
+			if (flag_left_just && (size_t) field_width > s_pos - conv_start)
+				for (size_t i = s_pos - conv_start; i < (size_t) field_width; i++)
+					if (s_pos++<s_len) s[s_pos-1] = ' ';
+
 			continue;
 		}
 
@@ -460,10 +485,14 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 			break;
 	}
 
-	if (s_pos < s_len)
-		s[s_pos] = '\0';
-	else if (s)
-		s[s_len-1] = '\0';
+	// Terminate the output only when there is room for a terminator.
+	if (s_len)
+	{
+		if (s_pos < s_len)
+			s[s_pos] = '\0';
+		else if (s)
+			s[s_len-1] = '\0';
+	}
 	return s_pos;
 }
 
