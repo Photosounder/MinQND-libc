@@ -538,7 +538,7 @@ char *strrchr(const char *s, int c) { return memrchr(s, c, strlen(s) + 1); }
 char *strpbrk(const char *s1, const char *s2) {
 	size_t i1, i2;
 	for (i1 = 0; s1[i1]; i1++) for (i2 = 0; s2[i2]; i2++) if (s1[i1] == s2[i2]) return (char *) &s1[i1];
-	return (char *) &s1[i1];
+	return NULL;
 }
 
 char *strstr(const char *s1, const char *s2) 
@@ -574,11 +574,18 @@ int memcmp(const void *s1, const void *s2, size_t n)
 	return n ? *l-*r : 0;
 }
 
-char *strcpy(char *s1, const char *s2) { return strncpy(s1, s2, SIZE_MAX); }
+char *strcpy(char *s1, const char *s2)
+{
+	char *d = s1;
+	for (; (*d=*s2); d++, s2++) {}
+	return s1;
+}
+
 char *strncpy(char *s1, const char *s2, size_t n)
 {
-	for (; n && (*s1=*s2); n--, s2++, s1++) {}
-	if (n) *s1 = '\0';
+	char *d = s1;
+	for (; n && *s2; n--, s2++, d++) *d = *s2;
+	for (; n; n--, d++) *d = '\0';
 	return s1;
 }
 

@@ -47,8 +47,18 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 
 			// Read conversion specifier
 			char conv_spec = fmt[f_pos];
+
+			// Treat pointers as hexadecimal integers until storage.
+			int conv_is_ptr = (conv_spec == 'p');
+			if (conv_is_ptr)
+				conv_spec = 'x';
 			int conv_is_int =   (conv_spec == 'd' || conv_spec == 'i' || conv_spec == 'o' || conv_spec == 'u' || conv_spec == 'x' || conv_spec == 'X');
 			int conv_is_float = (conv_spec == 'g' || conv_spec == 'G' || conv_spec == 'f' || conv_spec == 'F' || conv_spec == 'e' || conv_spec == 'E');
+
+			// Skip leading input whitespace for conversions that do so implicitly.
+			if (conv_is_int || conv_is_float || conv_spec == 's')
+				while (isspace(s[s_pos]))
+					s_pos++;
 
 			if (conv_spec == 'n')
 			{
@@ -128,18 +138,18 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 						break;
 				}
 
+				// Fail the conversion when no character was consumed.
+				if (is == 0)
+				{
+					if (s[s_pos])
+						ret_eof = 0;
+					goto eof_reached;
+				}
+
 				if (flag_suppr == 0)
 					vs[is] = '\0';
 
 				match = 1;
-			}
-
-			// Handle pointer
-			if (conv_spec == 'p')
-			{
-				// Turn %p into %zx
-				len_mod = 'z';
-				conv_spec = 'x';
 			}
 
 			// Read sign
@@ -148,8 +158,18 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 				if (s[s_pos] == '-' || s[s_pos] == '+')
 					neg = (s[s_pos++] == '-');
 
-			// Skip 0x and handle hexadecimal for %i
-			if (conv_spec == 'i' || conv_spec == 'x' || conv_spec == 'X')
+			// Skip 0x and select the base for %i.
+			if (conv_spec == 'i' && s[s_pos] == '0')
+			{
+				if ((s[s_pos+1] == 'x' || s[s_pos+1] == 'X') && isxdigit(s[s_pos+2]))
+				{
+					s_pos += 2;
+					conv_spec = 'x';
+				}
+				else
+					conv_spec = 'o';
+			}
+			else if (conv_spec == 'x' || conv_spec == 'X')
 				if (s[s_pos] == '0' && (s[s_pos+1] == 'x' || s[s_pos+1] == 'X') && isxdigit(s[s_pos+2]))
 				{
 					s_pos += 2;
@@ -162,7 +182,11 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 			{
 				// Check validity
 				if (!isdigit(s[s_pos]))
+				{
+					if (s[s_pos])
+						ret_eof = 0;
 					goto eof_reached;
+				}
 				match = 1;
 
 				// Read and add up digits
@@ -174,12 +198,37 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 				while (isdigit(s[s_pos]));
 			}
 
+			// Read octal
+			if (conv_spec == 'o')
+			{
+				// Check validity
+				if ((unsigned)s[s_pos]-'0' >= 8)
+				{
+					if (s[s_pos])
+						ret_eof = 0;
+					goto eof_reached;
+				}
+				match = 1;
+
+				// Read and add up digits
+				do
+				{
+					int d = s[s_pos++] - '0';
+					vi = vi*8 + d;
+				}
+				while ((unsigned)s[s_pos]-'0' < 8);
+			}
+
 			// Read hexadecimal
 			if (conv_spec == 'x' || conv_spec == 'X')
 			{
 				// Check validity
 				if (!isxdigit(s[s_pos]))
+				{
+					if (s[s_pos])
+						ret_eof = 0;
 					goto eof_reached;
+				}
 				match = 1;
 
 				// Read and add up digits
@@ -223,7 +272,11 @@ int vsscanf(const char *s, const char *fmt, va_list arg)
 
 				// Check validity
 				if (!isdigit(s[s_pos]) && s[s_pos] != '.')
+				{
+					if (s[s_pos])
+						ret_eof = 0;
 					goto eof_reached;
+				}
 				match = 1;
 
 				// Read and add up digits and track the dot
@@ -289,7 +342,13 @@ float_conv_end:
 			// Store integer
 			if (conv_is_int && flag_suppr == 0)
 			{
-				switch (len_mod)
+				// Store pointers through the pointer type expected by %p.
+				if (conv_is_ptr)
+				{
+					void **pv = va_arg(arg, void **);
+					*pv = (void *)(uintptr_t) vi;
+				}
+				else switch (len_mod)
 				{
 						case 'h':  if (len_mod_doubled)
 							   { signed char   *pv = va_arg(arg, signed char *);	*pv = vi; } else
