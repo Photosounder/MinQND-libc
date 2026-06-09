@@ -225,6 +225,11 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 				{
 					if (s_pos++<s_len) s[s_pos-1] = '+';
 				}
+				// Print a leading space for positive signed values.
+				else if (flag_space)
+				{
+					if (s_pos++<s_len) s[s_pos-1] = ' ';
+				}
 
 				// Print a single digit for zero.
 				if (vi == 0)
@@ -357,6 +362,11 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 				else if (flag_plus)
 				{
 					if (s_pos++<s_len) s[s_pos-1] = '+';
+				}
+				// Print a leading space for positive floating values.
+				else if (flag_space)
+				{
+					if (s_pos++<s_len) s[s_pos-1] = ' ';
 				}
 
 				// Zero
