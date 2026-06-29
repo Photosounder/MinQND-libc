@@ -87,6 +87,7 @@ extern double fmax(double x, double y);
 extern float fminf(float x, float y);
 extern float fmaxf(float x, float y);
 
+#ifdef __wasm__
 static float fabsf(float x) { return __builtin_fabsf(x); }
 static double fabs(double x) { return __builtin_fabs(x); }
 static float sqrtf(float x) { return __builtin_sqrtf(x); }
@@ -111,8 +112,6 @@ static double fma(double x, double y, double z)
 	__attribute__((__vector_size__(2 * sizeof(double)))) double r2, x2 = {x}, y2 = {y}, z2 = {z};
 	r2 = __builtin_wasm_relaxed_madd_f64x2(x2, y2, z2);
 	return r2[0];
-#elif defined(__has_builtin) && __has_builtin(__builtin_elementwise_fma)
-	return __builtin_elementwise_fma(x, y, z);
 #else
 	return x*y + z;
 #endif
@@ -124,12 +123,32 @@ static float fmaf(float x, float y, float z)
 	__attribute__((__vector_size__(4 * sizeof(float)))) float r4, x4 = {x}, y4 = {y}, z4 = {z};
 	r4 = __builtin_wasm_relaxed_madd_f32x4(x4, y4, z4);
 	return r4[0];
-#elif defined(__has_builtin) && __has_builtin(__builtin_elementwise_fma)
-	return __builtin_elementwise_fma(x, y, z);
 #else
 	return x*y + z;
 #endif
 }
+#else
+extern float fabsf(float x);
+extern double fabs(double x);
+extern float sqrtf(float x);
+extern double sqrt(double x);
+extern float copysignf(float x, float y);
+extern double copysign(double x, double y);
+extern float ceilf(float x);
+extern double ceil(double x);
+extern float floorf(float x);
+extern double floor(double x);
+extern float truncf(float x);
+extern double trunc(double x);
+extern float nearbyintf(float x);
+extern double nearbyint(double x);
+extern float rintf(float x);
+extern double rint(double x);
+extern double round(double x);
+extern long lroundf(float x);
+extern float fmaf(float x, float y, float z);
+extern double fma(double x, double y, double z);
+#endif
 
 
 //**** ctype.h ****
