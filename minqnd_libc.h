@@ -80,6 +80,7 @@ extern double sinh(double x);
 extern double cosh(double x);
 extern double tanh(double x);
 extern double hypot(double x, double y);
+extern float hypotf(float x, float y);
 extern double tgamma(double x);
 extern double erf(double x);
 extern double fmin(double x, double y);
@@ -94,8 +95,6 @@ static float fabsf(float x) { return __builtin_fabsf(x); }
 static double fabs(double x) { return __builtin_fabs(x); }
 static float sqrtf(float x) { return __builtin_sqrtf(x); }
 static double sqrt(double x) { return __builtin_sqrt(x); }
-static float hypotf(float x, float y) { return sqrtf(x*x + y*y); }
-static double hypot(double x, double y) { return sqrt(x*x + y*y); }
 static float copysignf(float x, float y) { return __builtin_copysignf(x, y); }
 static double copysign(double x, double y) { return __builtin_copysign(x, y); }
 static float ceilf(float x) { return __builtin_ceilf(x); }
@@ -136,8 +135,6 @@ extern float fabsf(float x);
 extern double fabs(double x);
 extern float sqrtf(float x);
 extern double sqrt(double x);
-extern float hypotf(float x, float y);
-extern double hypot(double x, double y);
 extern float copysignf(float x, float y);
 extern double copysign(double x, double y);
 extern float ceilf(float x);
@@ -398,6 +395,7 @@ double sinh(double x) { return (exp(x) - exp(-x)) * 0.5; }
 double cosh(double x) { return (exp(x) + exp(-x)) * 0.5; }
 double tanh(double x) { double e = exp(2.*x); return (e-1.) / (e+1.); }
 double hypot(double x, double y) { return sqrt(x*x + y*y); }
+float hypotf(float x, float y) { return sqrtf(x*x + y*y); }
 double tgamma(double x) { return NAN; }	// TODO
 
 double erf(double x)	// error < 1.5e-15
