@@ -86,12 +86,16 @@ extern double fmin(double x, double y);
 extern double fmax(double x, double y);
 extern float fminf(float x, float y);
 extern float fmaxf(float x, float y);
+extern double frexp(double x, int *exponent);
+extern float frexpf(float x, int *exponent);
 
 #ifdef __wasm__
 static float fabsf(float x) { return __builtin_fabsf(x); }
 static double fabs(double x) { return __builtin_fabs(x); }
 static float sqrtf(float x) { return __builtin_sqrtf(x); }
 static double sqrt(double x) { return __builtin_sqrt(x); }
+static float hypotf(float x, float y) { return sqrtf(x*x + y*y); }
+static double hypot(double x, double y) { return sqrt(x*x + y*y); }
 static float copysignf(float x, float y) { return __builtin_copysignf(x, y); }
 static double copysign(double x, double y) { return __builtin_copysign(x, y); }
 static float ceilf(float x) { return __builtin_ceilf(x); }
@@ -132,6 +136,8 @@ extern float fabsf(float x);
 extern double fabs(double x);
 extern float sqrtf(float x);
 extern double sqrt(double x);
+extern float hypotf(float x, float y);
+extern double hypot(double x, double y);
 extern float copysignf(float x, float y);
 extern double copysign(double x, double y);
 extern float ceilf(float x);
@@ -259,6 +265,47 @@ typedef long ssize_t;
 //**** math.h ****
 
 double fmod(double x, double y) { return x - trunc(x / y) * y; }
+
+double frexp(double x, int *e)
+{
+	int er = double_as_int(x) << 1 >> 53;
+
+	if (er == 0 && (double_as_int(x) & 0x000fffffffffffff))	// Subnormals
+	{
+		x *= 0x1p54;
+		*e = (int) (double_as_int(x) << 1 >> 53) - (1022+54);
+	}
+	else if (er == 0 || er == 0x7ff)			// Zero and NaN
+	{
+		*e = 0;
+		return x;
+	}
+	else
+		*e = er - 1022;
+
+	// Replace the exponent while retaining the sign and significand
+	return int_as_double((double_as_int(x) & 0x800fffffffffffff) | 0x3fe0000000000000);
+}
+
+float frexpf(float x, int *e)
+{
+	int er = float_as_int(x) << 1 >> 24;
+
+	if (er == 0 && (float_as_int(x) & 0x007fffff))
+	{
+		x *= 0x1p25f;
+		*e = (int) (float_as_int(x) << 1 >> 24) - (126+25);
+	}
+	else if (er == 0 || er == 0xff)
+	{
+		*e = 0;
+		return x;
+	}
+	else
+		*e = er - 126;
+
+	return int_as_float((float_as_int(x) & 0x807fffff) | 0x3f000000);
+}
 
 double exp(double x) { return exp2(x*1.4426950408889634); }
 float expf(float x) { return exp(x); }
