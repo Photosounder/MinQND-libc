@@ -94,18 +94,13 @@ Truly original and unique function implementations worth looking at:
 I use it along with CIT Alloc and my default WAHE-related headers in WebAssembly modules by writing this at the top of the module's C file:
 
 ```c
+#define WAHE_MODULE
 #define MINQND_LIBC_IMPLEMENTATION
 #include "minqnd_libc.h"
-
-#include "cita_wasm.h"
 
 #define WAHE_INCLUDE_IMPL
 #include <wahe_imports.h>
 #include <wahe_utils.h>
-
-#define CITA_EXCLUDE_STRING_H
-#define CITA_WASM_IMPLEMENTATION_PART2
-#include "cita_wasm.h"
 ```
 
 Note how there are no standard headers like `stdlib.h`, the litany of standard header includes from the original version of this module is gone, there's only `minqnd_libc.h`. This is the minimal quick & dirty approach, we don't need all these separate headers, we don't need to conform to the standard for such details, this works.
