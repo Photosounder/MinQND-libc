@@ -17,16 +17,6 @@ double make_power_of_10(int p)
 	return v;
 }
 
-intmax_t make_power_of_10_int(int p)
-{
-	intmax_t v = 1;
-
-	while (p >= 5) { v *= 100000;  p -= 5; }
-	while (p >= 1) { v *= 10;      p -= 1; }
-
-	return v;
-}
-
 int get_power_of_10_exponent(double v)
 {
 	v = fabs(v);
@@ -211,68 +201,58 @@ int vsnprintf(char *s, size_t s_len, const char *fmt, va_list arg)
 				}
 			}
 
-			// Print signed decimal
-			if (conv_spec == 'd' || conv_spec == 'i')
+			// Print signed and unsigned decimal with precision and field padding
+			if (conv_spec == 'd' || conv_spec == 'i' || conv_spec == 'u')
 			{
-				// Print and remove sign
-				if (vi < 0)
+				// Convert signed values to an unsigned magnitude without overflowing the minimum value
+				int is_signed = conv_spec == 'd' || conv_spec == 'i';
+				int is_negative = is_signed && vi < 0;
+				uintmax_t magnitude = is_signed ? (is_negative ? 0 - (uintmax_t) vi : (uintmax_t) vi) : vu;
+
+				// Select the sign character requested by the signed conversion
+				char sign = is_negative ? '-' : is_signed && flag_plus ? '+' : is_signed && flag_space ? ' ' : '\0';
+
+				// Count digits and build the highest decimal divisor without floating-point conversion
+				uintmax_t divisor = 1;
+				size_t digit_count = magnitude == 0 && precision == 0 ? 0 : 1;
+				for (uintmax_t reduced = magnitude; reduced >= 10; reduced /= 10)
 				{
-					if (s_pos++<s_len) s[s_pos-1] = '-';
-					vi = -vi;
-				}
-				// Print an explicit plus sign for positive signed values.
-				else if (flag_plus)
-				{
-					if (s_pos++<s_len) s[s_pos-1] = '+';
-				}
-				// Print a leading space for positive signed values.
-				else if (flag_space)
-				{
-					if (s_pos++<s_len) s[s_pos-1] = ' ';
+					divisor *= 10;
+					digit_count++;
 				}
 
-				// Print a single digit for zero.
-				if (vi == 0)
-				{
+				// Calculate precision zeroes and field padding including the sign
+				size_t precision_zeroes = precision > 0 && (size_t) precision > digit_count ?
+					(size_t) precision - digit_count : 0;
+				size_t content_width = (sign != '\0') + precision_zeroes + digit_count;
+				size_t field_padding = field_width > 0 && (size_t) field_width > content_width ?
+					(size_t) field_width - content_width : 0;
+				int zero_field_padding = flag_zero_pad && !flag_left_just && precision < 0;
+
+				// Emit ordinary right-justifying spaces before the sign
+				if (!flag_left_just && !zero_field_padding)
+					for (size_t i=0; i < field_padding; i++)
+						if (s_pos++<s_len) s[s_pos-1] = ' ';
+
+				// Emit the sign before any field-width zeroes
+				if (sign)
+					if (s_pos++<s_len) s[s_pos-1] = sign;
+
+				// Emit zero padding requested by the field width and precision
+				if (zero_field_padding)
+					for (size_t i=0; i < field_padding; i++)
+						if (s_pos++<s_len) s[s_pos-1] = '0';
+				for (size_t i=0; i < precision_zeroes; i++)
 					if (s_pos++<s_len) s[s_pos-1] = '0';
-				}
-				// Print the remaining digits only for non-zero values.
-				else
-				{
-					int e10 = get_power_of_10_exponent(vi);
 
-					// Print digits
-					for (; e10 >= 0; e10--)
-					{
-						intmax_t p = make_power_of_10_int(e10);
-						int d = vi / p;
-						if (s_pos++<s_len) s[s_pos-1] = '0' + d;
-						vi -= d * p;
-					}
-				}
-			}
-
-			// Print unsigned decimal
-			if (conv_spec == 'u')
-			{
-				// Print a single digit for zero.
-				if (vu == 0)
+				// Emit the decimal digits from most to least significant
+				for (size_t i=0; i < digit_count; i++)
 				{
-					if (s_pos++<s_len) s[s_pos-1] = '0';
-				}
-				// Print the remaining digits only for non-zero values.
-				else
-				{
-					int e10 = get_power_of_10_exponent(vu);
-
-					// Print digits
-					for (; e10 >= 0; e10--)
-					{
-						uintmax_t p = make_power_of_10_int(e10);
-						unsigned int d = vu / p;
-						if (s_pos++<s_len) s[s_pos-1] = '0' + d;
-						vu -= d * p;
-					}
+					unsigned int digit = magnitude / divisor;
+					if (s_pos++<s_len) s[s_pos-1] = '0' + digit;
+					magnitude -= digit * divisor;
+					if (divisor > 1)
+						divisor /= 10;
 				}
 			}
 
