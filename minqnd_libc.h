@@ -1,6 +1,10 @@
 #ifndef MINQND_LIBC_H
 #define MINQND_LIBC_H
 
+#if defined(__wasm__) && defined(WAHE_MODULE)
+#define WAHE_IO
+#endif
+
 //**** stdint.h ****
 
 #include <stdint.h>
@@ -161,7 +165,9 @@ extern int isdigit(int c);
 extern int isxdigit(int c);
 extern int isalpha(int c);
 extern int isalnum(int c);
+extern int islower(int c);
 extern int isupper(int c);
+extern int toupper(int c);
 extern int tolower(int c);
 extern int isprint(int c);
 
@@ -180,19 +186,36 @@ extern int isprint(int c);
 #define va_arg(v,l)     __builtin_va_arg(v,l)
 #define va_copy(d,s)    __builtin_va_copy(d,s)
 
-typedef int FILE;	// we don't actually use FILE for now
+#ifdef __wasm__
+typedef uint8_t minqnd_file_v128_t __attribute__((__vector_size__(16), __aligned__(16)));
+#endif
+
+typedef struct
+{
+	#ifdef __wasm__
+	minqnd_file_v128_t cache[64];
+	#else
+	uint8_t cache[1024];
+	#endif
+	uint64_t position, cache_offset;
+	size_t handle, cache_size;
+	unsigned int mode;
+	unsigned char cache_eof, eof, error;
+} FILE;
 extern FILE *const stdin;
 extern FILE *const stdout;
 extern FILE *const stderr;
-static char *fgets(char *s, int n, FILE *stream) { return NULL; }
-static int fprintf(FILE *stream, const char *format, ...) { return -1; }
-static FILE *fopen(const char *filename, const char *mode) { return NULL; }
-static int fclose(FILE *stream) { return EOF; }
-static size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream) { return EOF; }
-static size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) { return EOF; }
-static int fseek(FILE *stream, long int offset, int whence) { return EOF; }
-static long int ftell(FILE *stream) { return 0; }
-static void rewind(FILE *stream) { }
+extern char *fgets(char *s, int n, FILE *stream);
+extern int fputs(const char *s, FILE *stream);
+extern int fprintf(FILE *stream, const char *format, ...);
+extern FILE *fopen(const char *filename, const char *mode);
+extern int fclose(FILE *stream);
+extern int feof(FILE *stream);
+extern size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+extern size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+extern int fseek(FILE *stream, long int offset, int whence);
+extern long int ftell(FILE *stream);
+extern void rewind(FILE *stream);
 
 extern void *memset(void *dest, int c, size_t n);
 extern void *memcpy(void *dest, const void *src, size_t n);
@@ -207,6 +230,7 @@ extern char *strstr(const char *s1, const char *s2);
 extern int strcmp(const char *s1, const char *s2);
 extern int strncmp(const char *s1, const char *s2, size_t n);
 extern int memcmp(const void *s1, const void *s2, size_t n);
+extern char *strcat(char *s1, const char *s2);
 extern char *strcpy(char *s1, const char *s2);
 extern char *strncpy(char *s1, const char *s2, size_t n);
 
@@ -254,10 +278,25 @@ typedef long long ssize_t;
 typedef long ssize_t;
 #endif
 
+#ifdef WAHE_IO
+__attribute__((__import_name__("wahe_run_command"))) extern char *wahe_run_command(char *command);
+#define CITA_EXCLUDE_STRING_H
+#include <cita_os.h>
+#endif
+
 #endif // MINQND_LIBC_H
 
 
 #ifdef MINQND_LIBC_IMPLEMENTATION
+
+#ifdef WAHE_IO
+#define CITA_OS_IMPLEMENTATION_PART1
+#include <cita_os.h>
+#undef CITA_OS_IMPLEMENTATION_PART1
+#define CITA_OS_IMPLEMENTATION
+#include <cita_os.h>
+#undef CITA_OS_IMPLEMENTATION
+#endif
 
 //**** math.h ****
 
@@ -454,7 +493,9 @@ int isdigit(int c) { return (unsigned)c-'0' < 10; }
 int isxdigit(int c) { return isdigit(c) || ((unsigned)c|32)-'a' < 6; }
 int isalpha(int c) { return ((unsigned)c|32)-'a' < 26; }
 int isalnum(int c) { return isalpha(c) || isdigit(c); }
+int islower(int c) { return (unsigned)c-'a' < 26; }
 int isupper(int c) { return (unsigned)c-'A' < 26; }
+int toupper(int c) { if (islower(c)) return c & ~32; return c; }
 int tolower(int c) { if (isupper(c)) return c | 32; return c; }
 int isprint(int c) { return (unsigned)c-0x20 < 0x5f; }
 
@@ -464,6 +505,521 @@ int isprint(int c) { return (unsigned)c-0x20 < 0x5f; }
 FILE *const stdin = NULL;
 FILE *const stdout = NULL;
 FILE *const stderr = NULL;
+
+#ifdef WAHE_IO
+#define MINQND_FILE_CACHE_SIZE 1024
+#define MINQND_FILE_READ 1
+#define MINQND_FILE_WRITE 2
+#define MINQND_FILE_APPEND 4
+
+static unsigned int minqnd_file_parse_mode(const char *mode)
+{
+	// Validate the required leading access mode
+	if (mode == NULL || (mode[0] != 'r' && mode[0] != 'w' && mode[0] != 'a'))
+		return 0;
+
+	// Derive the basic access flags
+	unsigned int flags = mode[0] == 'r' ? MINQND_FILE_READ : MINQND_FILE_WRITE;
+	if (mode[0] == 'a')
+		flags |= MINQND_FILE_APPEND;
+
+	// Accept the standard binary and update suffixes in either order
+	int binary_seen = 0, update_seen = 0;
+	for (size_t i=1; mode[i]; i++)
+	{
+		if (mode[i] == 'b' && binary_seen == 0)
+			binary_seen = 1;
+		else if (mode[i] == '+' && update_seen == 0)
+		{
+			update_seen = 1;
+			flags |= MINQND_FILE_READ | MINQND_FILE_WRITE;
+		}
+		else
+			return 0;
+	}
+	return flags;
+}
+
+static int minqnd_file_fill_cache(FILE *stream)
+{
+	char command[192];
+
+	// Discard the previous window before requesting a replacement
+	stream->cache_size = 0;
+	stream->cache_eof = 0;
+	stream->cache_offset = stream->position;
+	int command_len = snprintf(command, sizeof(command),
+		"Load from file %zu at %#" PRIx64 " to location: %d bytes at %#zx",
+		stream->handle, stream->position, MINQND_FILE_CACHE_SIZE, (size_t) (uintptr_t) stream->cache);
+	if (command_len < 0 || (size_t) command_len >= sizeof(command))
+	{
+		stream->error = 1;
+		return 0;
+	}
+
+	// Run the synchronous load command and require a result message
+	char *response = wahe_run_command(command);
+	if (response == NULL)
+	{
+		stream->error = 1;
+		return 0;
+	}
+
+	// Parse the byte count and the optional terminal condition
+	size_t loaded = 0;
+	int response_len = 0, valid = sscanf(response, "Loaded %zu bytes%n", &loaded, &response_len) == 1;
+	const char *suffix = valid ? &response[response_len] : "";
+	if (!valid || loaded > MINQND_FILE_CACHE_SIZE || stream->cache_offset > UINT64_MAX - loaded)
+		stream->error = 1;
+	else if (suffix[0] == '\0')
+	{
+		if (loaded == 0)
+			stream->error = 1;
+	}
+	else if (strcmp(suffix, " (end of file)") == 0)
+	{
+		stream->cache_eof = 1;
+		if (loaded == 0)
+			stream->eof = 1;
+	}
+	else if (strcmp(suffix, " (read error)") == 0)
+		stream->error = 1;
+	else
+		stream->error = 1;
+
+	// Keep only data described by a valid response
+	if (valid && loaded <= MINQND_FILE_CACHE_SIZE && stream->cache_offset <= UINT64_MAX - loaded)
+		stream->cache_size = loaded;
+	free(response);
+	return stream->cache_size != 0;
+}
+
+static int minqnd_file_get_size(FILE *stream, uint64_t *file_size)
+{
+	char command[96];
+
+	// Request the current size from the file service
+	int command_len = snprintf(command, sizeof(command), "Get size of file %zu", stream->handle);
+	if (command_len < 0 || (size_t) command_len >= sizeof(command))
+	{
+		stream->error = 1;
+		return 0;
+	}
+	char *response = wahe_run_command(command);
+	if (response == NULL)
+	{
+		stream->error = 1;
+		return 0;
+	}
+
+	// Parse the complete decimal size response
+	int response_len = 0;
+	intmax_t parsed_size = -1;
+	int valid = sscanf(response, "File size %ju bytes%n", &parsed_size, &response_len) == 1 &&
+		parsed_size >= 0 && response[response_len] == '\0';
+	if (valid)
+		*file_size = (uint64_t) parsed_size;
+	else
+		stream->error = 1;
+	free(response);
+	return valid;
+}
+
+static int minqnd_file_add_offset(uint64_t base, long int offset, uint64_t *result)
+{
+	// Add nonnegative offsets without wrapping
+	if (offset >= 0)
+	{
+		uint64_t positive_offset = (uint64_t) offset;
+		if (base > UINT64_MAX - positive_offset)
+			return 0;
+		*result = base + positive_offset;
+		return 1;
+	}
+
+	// Subtract negative offsets without negating the minimum long value
+	uint64_t negative_offset = 0 - (uint64_t) offset;
+	if (negative_offset > base)
+		return 0;
+	*result = base - negative_offset;
+	return 1;
+}
+#endif
+
+char *fgets(char *s, int n, FILE *stream)
+{
+#ifdef WAHE_IO
+	// Reject unusable destinations and streams
+	if (s == NULL || n <= 0 || stream == NULL || (stream->mode & MINQND_FILE_READ) == 0)
+		return NULL;
+
+	// Read through the shared cache until a newline or the destination limit
+	int pos = 0;
+	while (pos < n-1)
+	{
+		if (fread(&s[pos], 1, 1, stream) != 1)
+			break;
+		if (s[pos++] == '\n')
+			break;
+	}
+	if (pos == 0 && n > 1)
+		return NULL;
+	s[pos] = '\0';
+	return s;
+#else
+	(void) s;
+	(void) n;
+	(void) stream;
+	return NULL;
+#endif
+}
+
+int fprintf(FILE *stream, const char *format, ...)
+{
+#ifdef WAHE_IO
+	// Reject invalid output streams before consuming arguments
+	if (stream == NULL || format == NULL || (stream->mode & MINQND_FILE_WRITE) == 0)
+		return -1;
+
+	// Measure the formatted output with a copied argument list
+	va_list args, measure_args;
+	va_start(args, format);
+	va_copy(measure_args, args);
+	int length = vsnprintf(NULL, 0, format, measure_args);
+	va_end(measure_args);
+	if (length < 0)
+	{
+		va_end(args);
+		stream->error = 1;
+		return -1;
+	}
+
+	// Reuse the stream cache or allocate enough temporary space
+	char *output = (char *) stream->cache;
+	int allocated = (size_t) length >= sizeof(stream->cache);
+	stream->cache_size = 0;
+	stream->cache_eof = 0;
+	if (allocated)
+		output = malloc((size_t) length + 1);
+	if (output == NULL)
+	{
+		va_end(args);
+		stream->error = 1;
+		return -1;
+	}
+
+	// Format once into the selected buffer and write every produced byte
+	int formatted = vsnprintf(output, (size_t) length + 1, format, args);
+	va_end(args);
+	size_t written = formatted == length ? fwrite(output, 1, (size_t) length, stream) : 0;
+	if (allocated)
+		free(output);
+	if (formatted != length || written != (size_t) length)
+	{
+		stream->error = 1;
+		return -1;
+	}
+	return length;
+#else
+	(void) stream;
+	(void) format;
+	return -1;
+#endif
+}
+
+FILE *fopen(const char *filename, const char *mode)
+{
+#ifdef WAHE_IO
+	// Validate locally representable modes and command paths
+	unsigned int flags = minqnd_file_parse_mode(mode);
+	if (filename == NULL || flags == 0 || strchr(filename, '\n') || strchr(filename, '\r'))
+		return NULL;
+
+	// Allocate the stream before opening its native handle
+	FILE *stream = calloc(1, sizeof(*stream));
+	if (stream == NULL)
+		return NULL;
+	int command_len = snprintf(NULL, 0, "Open file (%s) at %s", mode, filename);
+	if (command_len < 0)
+	{
+		free(stream);
+		return NULL;
+	}
+	char *command = malloc((size_t) command_len + 1);
+	if (command == NULL)
+	{
+		free(stream);
+		return NULL;
+	}
+	snprintf(command, (size_t) command_len + 1, "Open file (%s) at %s", mode, filename);
+
+	// Open the native file and parse its nonzero opaque handle
+	char *response = wahe_run_command(command);
+	free(command);
+	int response_len = 0;
+	size_t handle = 0;
+	int valid = response && sscanf(response, "File handle %zu%n", &handle, &response_len) == 1 &&
+		handle != 0 && response[response_len] == '\0';
+	if (response)
+		free(response);
+	if (!valid)
+	{
+		free(stream);
+		return NULL;
+	}
+
+	// Initialise the module-side logical stream state
+	stream->handle = handle;
+	stream->mode = flags;
+	return stream;
+#else
+	(void) filename;
+	(void) mode;
+	return NULL;
+#endif
+}
+
+int fclose(FILE *stream)
+{
+#ifdef WAHE_IO
+	// Reject streams without a live native handle
+	if (stream == NULL || stream->handle == 0)
+		return EOF;
+	size_t handle = stream->handle;
+	char command[96];
+	int command_len = snprintf(command, sizeof(command), "Close file %zu", handle);
+
+	// Close the native handle and validate its acknowledgement
+	char *response = command_len >= 0 && (size_t) command_len < sizeof(command) ? wahe_run_command(command) : NULL;
+	int response_len = 0;
+	size_t closed_handle = 0;
+	int valid = response && sscanf(response, "Closed file %zu%n", &closed_handle, &response_len) == 1 &&
+		closed_handle == handle && response[response_len] == '\0';
+	if (response)
+		free(response);
+
+	// Release the module-side stream regardless of the close result
+	stream->handle = 0;
+	free(stream);
+	return valid ? 0 : EOF;
+#else
+	(void) stream;
+	return EOF;
+#endif
+}
+
+int feof(FILE *stream)
+{
+#ifdef WAHE_IO
+	// Report whether a previous logical read encountered the end of the stream
+	return stream != NULL && stream->eof != 0;
+#else
+	(void) stream;
+	return 0;
+#endif
+}
+
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+#ifdef WAHE_IO
+	// Handle empty requests before validating their unused destination
+	if (size == 0 || nmemb == 0)
+		return 0;
+	if (ptr == NULL || stream == NULL || (stream->mode & MINQND_FILE_READ) == 0)
+		return 0;
+	size_t requested = 0;
+	if (__builtin_mul_overflow(size, nmemb, &requested))
+	{
+		stream->error = 1;
+		return 0;
+	}
+
+	// Consume cached bytes and synchronously refill only when necessary
+	size_t copied = 0;
+	while (copied < requested)
+	{
+		if (stream->position >= stream->cache_offset)
+		{
+			uint64_t cache_pos = stream->position - stream->cache_offset;
+			if (cache_pos < stream->cache_size)
+			{
+				size_t available = stream->cache_size - (size_t) cache_pos;
+				size_t copy_size = requested - copied < available ? requested - copied : available;
+				memcpy(&((uint8_t *) ptr)[copied], &((uint8_t *) stream->cache)[cache_pos], copy_size);
+				stream->position += copy_size;
+				copied += copy_size;
+				continue;
+			}
+			if (cache_pos == stream->cache_size && stream->cache_eof)
+			{
+				stream->eof = 1;
+				break;
+			}
+		}
+		if (stream->error || !minqnd_file_fill_cache(stream))
+			break;
+	}
+	return copied / size;
+#else
+	(void) ptr;
+	(void) size;
+	(void) nmemb;
+	(void) stream;
+	return EOF;
+#endif
+}
+
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+#ifdef WAHE_IO
+	// Handle empty requests before validating their unused source
+	if (size == 0 || nmemb == 0)
+		return 0;
+	if (ptr == NULL || stream == NULL || (stream->mode & MINQND_FILE_WRITE) == 0)
+		return 0;
+	size_t requested = 0;
+	if (__builtin_mul_overflow(size, nmemb, &requested))
+	{
+		stream->error = 1;
+		return 0;
+	}
+
+	// Expose the source range to the native file service
+	char command[224];
+	int command_len = snprintf(command, sizeof(command),
+		"Write to file %zu at %#" PRIx64 " from location: %zu bytes at %#zx",
+		stream->handle, stream->position, requested, (size_t) (uintptr_t) ptr);
+	stream->cache_size = 0;
+	stream->cache_eof = 0;
+	stream->eof = 0;
+	if (command_len < 0 || (size_t) command_len >= sizeof(command))
+	{
+		stream->error = 1;
+		return 0;
+	}
+	char *response = wahe_run_command(command);
+	if (response == NULL)
+	{
+		stream->error = 1;
+		return 0;
+	}
+
+	// Parse the written byte count, resulting position and optional error
+	size_t written = 0;
+	int response_len = 0;
+	intmax_t parsed_position = -1;
+	int valid = sscanf(response, "Wrote %zu bytes, position %jx%n", &written, &parsed_position, &response_len) == 2 &&
+		parsed_position >= 0 && written <= requested;
+	const char *suffix = valid ? &response[response_len] : "";
+	int write_error = valid && strcmp(suffix, " (write error)") == 0;
+	if (!valid || (suffix[0] && !write_error))
+	{
+		stream->error = 1;
+		written = 0;
+	}
+	else
+	{
+		stream->position = (uint64_t) parsed_position;
+		if (write_error || written < requested)
+			stream->error = 1;
+	}
+	free(response);
+	return written / size;
+#else
+	(void) ptr;
+	(void) size;
+	(void) nmemb;
+	(void) stream;
+	return EOF;
+#endif
+}
+
+int fputs(const char *s, FILE *stream)
+{
+	// Write the complete string without its terminator
+	size_t length = strlen(s);
+	return fwrite(s, 1, length, stream) == length ? 0 : EOF;
+}
+
+int fseek(FILE *stream, long int offset, int whence)
+{
+#ifdef WAHE_IO
+	// Resolve the selected origin without changing the stream first
+	if (stream == NULL || stream->handle == 0)
+		return EOF;
+	uint64_t base = 0, position = 0;
+	if (whence == SEEK_SET)
+		base = 0;
+	else if (whence == SEEK_CUR)
+		base = stream->position;
+	else if (whence == SEEK_END)
+	{
+		if (!minqnd_file_get_size(stream, &base))
+			return EOF;
+	}
+	else
+	{
+		stream->error = 1;
+		return EOF;
+	}
+
+	// Commit a representable nonnegative logical position and clear EOF
+	if (!minqnd_file_add_offset(base, offset, &position))
+	{
+		stream->error = 1;
+		return EOF;
+	}
+	stream->position = position;
+	stream->eof = 0;
+	return 0;
+#else
+	(void) stream;
+	(void) offset;
+	(void) whence;
+	return EOF;
+#endif
+}
+
+long int ftell(FILE *stream)
+{
+#ifdef WAHE_IO
+	// Return only positions representable by the public long result
+	if (stream == NULL || stream->handle == 0)
+		return EOF;
+	long int position = (long int) stream->position;
+	if (position < 0 || (uint64_t) position != stream->position)
+	{
+		stream->error = 1;
+		return EOF;
+	}
+	return position;
+#else
+	(void) stream;
+	return 0;
+#endif
+}
+
+void rewind(FILE *stream)
+{
+#ifdef WAHE_IO
+	// Seek to the start and clear both stream indicators
+	if (stream)
+	{
+		(void) fseek(stream, 0, SEEK_SET);
+		stream->eof = 0;
+		stream->error = 0;
+	}
+#else
+	(void) stream;
+#endif
+}
+
+#ifdef WAHE_IO
+#undef MINQND_FILE_CACHE_SIZE
+#undef MINQND_FILE_READ
+#undef MINQND_FILE_WRITE
+#undef MINQND_FILE_APPEND
+#endif
 
 
 //**** stdlib.h ****
@@ -636,6 +1192,12 @@ int memcmp(const void *s1, const void *s2, size_t n)
 	const unsigned char *l=s1, *r=s2;
 	for (; n && *l == *r; n--, l++, r++);
 	return n ? *l-*r : 0;
+}
+
+char *strcat(char *s1, const char *s2)
+{
+	strcpy(s1 + strlen(s1), s2);
+	return s1;
 }
 
 char *strcpy(char *s1, const char *s2)
