@@ -12,6 +12,7 @@
 
 //**** limits.h & float.h ****
 
+#define SHRT_MIN -32767
 #define INT_MAX 0x7fffffff
 #define FLT_MAX 3.4028235e38f
 #define DBL_MAX 1.7976931348623147e+308
@@ -64,6 +65,7 @@ extern double log(double x);
 extern double log2(double x);
 extern double log10(double x);
 extern double pow(double x, double y);
+extern float powf(float x, float y);
 extern double cbrt(double x);
 extern float sinf(float x);
 extern float cosf(float x);
@@ -373,6 +375,7 @@ double log2(double x)	// error < 5.6e-16 in x = [1 , 2]
 }
 double log10(double x) { return log2(x) * 0.3010299956639812; }
 double pow(double x, double y) { return exp2(log2(x) * y); }
+float powf(float x, float y) { return pow(x, y); }
 double cbrt(double x) { return pow(x, 1./3.); }
 
 float sinf(float x) { return sin_trf((double) x * (1./(2.*M_PI))); }
