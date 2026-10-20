@@ -1,5 +1,8 @@
 :toc:
 
+[.small]
+This document was written in the pre-AI days of March 2024, back when doing any little thing would take days.
+
 == Minimal quick & dirty libc for my WebAssembly modules
 
 A one-file approach to having a libc for my WebAssembly modules. Technically there are 3 files, but two of them are virtually part of the main one due to being directly included in it, and also the allocator part is two extra files https://github.com/Photosounder/CITAlloc/[found in a separate project].
