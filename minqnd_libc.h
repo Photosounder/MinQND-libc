@@ -1037,7 +1037,8 @@ double strtod(const char *nptr, char **endptr)
 	double v = NAN;
 	int n = 0;
 	sscanf(nptr, "%lg%n", &v, &n);
-	*endptr = (char *) &nptr[n];
+	if (endptr)
+		*endptr = (char *) &nptr[n];
 	return v;
 }
 
